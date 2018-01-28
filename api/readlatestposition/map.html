@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>View Animation</title>
+    <link rel="stylesheet" href="https://openlayers.org/en/v4.6.4/css/ol.css" type="text/css">
+    <!-- The line below is only needed for old environments like Internet Explorer and Android 4.x -->
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.1/jquery.min.js"></script>
+    <script src="https://cdn.polyfill.io/v2/polyfill.min.js?features=requestAnimationFrame,Element.prototype.classList,URL"></script>
+    <script src="https://openlayers.org/en/v4.6.4/build/ol.js"></script>
+  </head>
+  <body>
+    <div id="map" class="map"></div>    
+    <script>         
+    	
+    	var pangyo_icon = new ol.Feature({
+        geometry: new ol.geom.Point(ol.proj.fromLonLat([127.111136, 37.3947228]))
+      });
+      
+      pangyo_icon.setStyle(new ol.style.Style({
+        image: new ol.style.Icon(/** @type {olx.style.IconOptions} */ ({
+          color: '#8959A8',
+          crossOrigin: 'anonymous',
+          src: 'https://openlayers.org/en/v4.6.4/examples/data/dot.png'
+        }))
+      }));
+      
+      var vectorSource = new ol.source.Vector({
+        features: [pangyo_icon]
+      });
+
+      var vectorLayer = new ol.layer.Vector({
+        source: vectorSource
+      });            
+    
+    	var pangyo = ol.proj.fromLonLat([127.111136, 37.3947228]);
+    
+      var view = new ol.View({
+        center: pangyo,
+        zoom: 9        
+      });
+
+      var map = new ol.Map({
+        target: 'map',
+        layers: [
+          new ol.layer.Tile({
+            preload: 4,
+            source: new ol.source.OSM()
+          }), vectorLayer
+        ],
+        // Improve user experience by loading tiles while animating. Will make
+        // animations stutter on mobile or slow devices.
+        loadTilesWhileAnimating: true,
+        view: view
+      });
+
+      // A bounce easing method (from https://github.com/DmitryBaranovskiy/raphael).
+      function bounce(t) {
+        var s = 7.5625, p = 2.75, l;
+        if (t < (1 / p)) {
+          l = s * t * t;
+        } else {
+          if (t < (2 / p)) {
+            t -= (1.5 / p);
+            l = s * t * t + 0.75;
+          } else {
+            if (t < (2.5 / p)) {
+              t -= (2.25 / p);
+              l = s * t * t + 0.9375;
+            } else {
+              t -= (2.625 / p);
+              l = s * t * t + 0.984375;
+            }
+          }
+        }
+        return l;
+      }
+
+      // An elastic easing method (from https://github.com/DmitryBaranovskiy/raphael).
+      function elastic(t) {
+        return Math.pow(2, -10 * t) * Math.sin((t - 0.075) * (2 * Math.PI) / 0.3) + 1;
+      }
+      
+      function flyTo(location, done) {      	      	      	      	      	      	      	
+        var duration = 1500;
+        var zoom = view.getZoom();
+        var parts = 2;
+        var called = false;
+        
+        pangyo_icon.setGeometry(new ol.geom.Point(location));
+        
+        function callback(complete) {
+          --parts;
+          if (called) {
+            return;
+          }
+          if (parts === 0 || !complete) {
+            called = true;
+            done(complete);
+          }
+        }
+        view.animate({
+          center: location,
+          duration: duration
+        }, callback);
+        view.animate({
+          zoom: zoom - 1,
+          duration: duration / 2
+        }, {
+          zoom: zoom,
+          duration: duration / 2
+        }, callback);
+      }     
+
+      function tour() {        
+         setTimeout(function() {
+                getPos();
+         }, 2500);        
+      }
+      
+      function getPos() {
+      	$.ajax({url : "http://apis.airpage.org/DRONEPLAYTOKEN/position/theknightsfield@gmail.com/get", 
+      					dataType : "jsonp",      					
+      					contentType : "application/json",      					
+      					cache : false,
+      					type : "GET",
+      					async: false,
+	      				success : function(r) { 
+	      					console.log(JSON.stringify(r)); 
+	      					
+	      					var npos = ol.proj.fromLonLat([r.lng *= 1, r.lat *= 1]);
+	      					flyTo(npos, function() {});  	
+	      					tour();
+	      				},
+		      				error:function(request,status,error){
+		        				alert("code:"+request.status+"\n"+"message:"+request.responseText+"\n"+"error:"+error);
+    				   	} 	
+      	});
+      }			      
+      
+      tour();
+    </script>
+  </body>
+</html>
