@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
   <head>
-    <title>View Animation</title>
+    <title>DronePlay Open API example - Dokdo Tour</title>
     <link rel="stylesheet" href="https://openlayers.org/en/v4.6.4/css/ol.css" type="text/css">
     <!-- The line below is only needed for old environments like Internet Explorer and Android 4.x -->
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.1/jquery.min.js"></script>
@@ -12,11 +12,11 @@
     <div id="map" class="map"></div>    
     <script>         
     	
-    	var pangyo_icon = new ol.Feature({
-        geometry: new ol.geom.Point(ol.proj.fromLonLat([127.111136, 37.3947228]))
+    	var dokdo_icon = new ol.Feature({
+        geometry: new ol.geom.Point(ol.proj.fromLonLat([131.8661992, 37.2435813]))
       });
       
-      pangyo_icon.setStyle(new ol.style.Style({
+      dokdo_icon.setStyle(new ol.style.Style({
         image: new ol.style.Icon(/** @type {olx.style.IconOptions} */ ({
           color: '#8959A8',
           crossOrigin: 'anonymous',
@@ -25,18 +25,18 @@
       }));
       
       var vectorSource = new ol.source.Vector({
-        features: [pangyo_icon]
+        features: [dokdo_icon]
       });
 
       var vectorLayer = new ol.layer.Vector({
         source: vectorSource
       });            
     
-    	var pangyo = ol.proj.fromLonLat([127.111136, 37.3947228]);
+    	var dokdo = ol.proj.fromLonLat([131.8661992, 37.2435813]);
     
       var view = new ol.View({
-        center: pangyo,
-        zoom: 9        
+        center: dokdo,
+        zoom: 17        
       });
 
       var map = new ol.Map({
@@ -86,7 +86,7 @@
         var parts = 2;
         var called = false;
         
-        pangyo_icon.setGeometry(new ol.geom.Point(location));
+        dokdo_icon.setGeometry(new ol.geom.Point(location));
         
         function callback(complete) {
           --parts;
