@@ -11,7 +11,7 @@
   <body>
     <div id="map" class="map"></div>    
     <script>         
-    	
+    	var maparray;
     	var dokdo_icon = new ol.Feature({
         geometry: new ol.geom.Point(ol.proj.fromLonLat([131.8661992, 37.2435813]))
       });
@@ -111,10 +111,23 @@
         }, callback);
       }     
 
-      function tour() {        
-         setTimeout(function() {
-                getPos();
-         }, 2500);        
+			function nexttour() {
+				r = maparray[currentindex];
+				var npos = ol.proj.fromLonLat([r.lng *= 1, r.lat *= 1]);
+	    	flyTo(npos, function() {});
+	    	
+	    	currentindex++;
+	    	if (currentindex >= mlength) currentindex = 0;
+	    	setTimeout(function() {
+                nexttour();
+         }, 2500);  
+			}
+
+      function tour(r) {        
+        maparray = r;
+	 			currentindex = 0;
+	 			mlength = maparray.length; 
+        nexttour();
       }
       
       function getPos() {
@@ -125,11 +138,8 @@
       					type : "GET",
       					async: false,
 	      				success : function(r) { 
-	      					console.log(JSON.stringify(r)); 
-	      					
-	      					var npos = ol.proj.fromLonLat([r.lng *= 1, r.lat *= 1]);
-	      					flyTo(npos, function() {});  	
-	      					tour();
+	      					console.log(JSON.stringify(r)); 				
+	      					tour(r);
 	      				},
 		      				error:function(request,status,error){
 		        				alert("code:"+request.status+"\n"+"message:"+request.responseText+"\n"+"error:"+error);
@@ -137,7 +147,7 @@
       	});
       }			      
       
-      tour();
+      getPos();
     </script>
   </body>
 </html>
