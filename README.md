@@ -5,7 +5,7 @@
 + [/api/android](https://github.com/theknightsfield/droneplaycodes/tree/master/api/android) : Open API를 활용하는 안드로이드 기반의 예제 코드.
 
 # DronePlayMission Code - 안드로이드 
-![예제실행화면](/api/screen.png "DronePlayMission")
+![예제실행화면](/api/screen.png "DronePlayMission"){: width="400"}
 
 * 지도를 터치하여 마크가 된 모든 장소로 드론이 방문하는 코드 예제 입니다.
  * 각 장소를 방문할때 마다 해당 장소의 좌표를 DronePlay API를 호출하여 기록합니다.
@@ -14,20 +14,20 @@
 > AndroidManifest.xml
 <pre>
 <code>
-<meta-data
+... meta-data
            android:name="com.google.android.geo.API_KEY"
-           android:value="GOOGLE-MAP-API-KEY" />
-<meta-data
+           android:value="GOOGLE-MAP-API-KEY" ...
+... meta-data
            android:name="com.dji.sdk.API_KEY"
-           android:value="DJI-SDK-API-KEY"/>
+           android:value="DJI-SDK-API-KEY" ...
 
-<meta-data
+... meta-data
            android:name="io.droneplay.token"
-           android:value="DRONEPLAY-API-TOKEN"/>
+           android:value="DRONEPLAY-API-TOKEN" ...
 
-<meta-data
+... meta-data
            android:name="io.droneplay.email"
-           android:value="DRONEPLAY-API-EMAIL"/>
+           android:value="DRONEPLAY-API-EMAIL" ...
 </code>
 </pre>
 
