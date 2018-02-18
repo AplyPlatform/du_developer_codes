@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
   <head>
-    <title>View Animation</title>
+    <title>DronePlay Open API example - Dokdo Tour</title>
     <link rel="stylesheet" href="https://openlayers.org/en/v4.6.4/css/ol.css" type="text/css">
     <!-- The line below is only needed for old environments like Internet Explorer and Android 4.x -->
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.1/jquery.min.js"></script>
@@ -11,12 +11,12 @@
   <body>
     <div id="map" class="map"></div>    
     <script>         
-    	
-    	var pangyo_icon = new ol.Feature({
-        geometry: new ol.geom.Point(ol.proj.fromLonLat([127.111136, 37.3947228]))
+    	var maparray;
+    	var dokdo_icon = new ol.Feature({
+        geometry: new ol.geom.Point(ol.proj.fromLonLat([131.8661992, 37.2435813]))
       });
       
-      pangyo_icon.setStyle(new ol.style.Style({
+      dokdo_icon.setStyle(new ol.style.Style({
         image: new ol.style.Icon(/** @type {olx.style.IconOptions} */ ({
           color: '#8959A8',
           crossOrigin: 'anonymous',
@@ -25,18 +25,18 @@
       }));
       
       var vectorSource = new ol.source.Vector({
-        features: [pangyo_icon]
+        features: [dokdo_icon]
       });
 
       var vectorLayer = new ol.layer.Vector({
         source: vectorSource
       });            
     
-    	var pangyo = ol.proj.fromLonLat([127.111136, 37.3947228]);
+    	var dokdo = ol.proj.fromLonLat([131.8661992, 37.2435813]);
     
       var view = new ol.View({
-        center: pangyo,
-        zoom: 9        
+        center: dokdo,
+        zoom: 17        
       });
 
       var map = new ol.Map({
@@ -86,7 +86,7 @@
         var parts = 2;
         var called = false;
         
-        pangyo_icon.setGeometry(new ol.geom.Point(location));
+        dokdo_icon.setGeometry(new ol.geom.Point(location));
         
         function callback(complete) {
           --parts;
@@ -111,10 +111,23 @@
         }, callback);
       }     
 
-      function tour() {        
-         setTimeout(function() {
-                getPos();
-         }, 2500);        
+			function nexttour() {
+				r = maparray[currentindex];
+				var npos = ol.proj.fromLonLat([r.lng *= 1, r.lat *= 1]);
+	    	flyTo(npos, function() {});
+	    	
+	    	currentindex++;
+	    	if (currentindex >= mlength) currentindex = 0;
+	    	setTimeout(function() {
+                nexttour();
+         }, 2500);  
+			}
+
+      function tour(r) {        
+        maparray = r;
+	 			currentindex = 0;
+	 			mlength = maparray.length; 
+        nexttour();
       }
       
       function getPos() {
@@ -125,11 +138,8 @@
       					type : "GET",
       					async: false,
 	      				success : function(r) { 
-	      					console.log(JSON.stringify(r)); 
-	      					
-	      					var npos = ol.proj.fromLonLat([r.lng *= 1, r.lat *= 1]);
-	      					flyTo(npos, function() {});  	
-	      					tour();
+	      					console.log(JSON.stringify(r)); 				
+	      					tour(r);
 	      				},
 		      				error:function(request,status,error){
 		        				alert("code:"+request.status+"\n"+"message:"+request.responseText+"\n"+"error:"+error);
@@ -137,7 +147,7 @@
       	});
       }			      
       
-      tour();
+      getPos();
     </script>
   </body>
 </html>
