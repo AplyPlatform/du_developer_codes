@@ -6,9 +6,10 @@
 
 # DronePlayMission Code - 안드로이드 
 <img src="/api/screen.png" alt="DronePlayMission" width="300">
-* 지도를 터치하여 마크가 된 모든 장소로 드론이 방문하는 코드 예제 입니다.
-  * 각 장소를 방문할때 마다 해당 장소의 좌표를 DronePlay API를 호출하여 기록합니다.
-  * 코드의 수행을 위해 Manifest 파일에 구글 지도 API KEY, DJI SDK API KEY, DRONEPLAY API TOKEN 정보를 입력해야 합니다.
+
++ 지도를 터치하여 마크가 된 모든 장소로 드론이 방문하는 코드 예제 입니다.
++ 각 장소를 방문할때 마다 해당 장소의 좌표를 DronePlay API를 호출하여 기록합니다.
++ 코드의 수행을 위해 Manifest 파일에 구글 지도 API KEY, DJI SDK API KEY, DRONEPLAY API TOKEN 정보를 입력해야 합니다.
 
 > AndroidManifest.xml
 <pre>
