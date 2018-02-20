@@ -191,6 +191,11 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         }
 
         mission = manager.getWaypointMission();
+        if (mission == null) {
+            ToastUtils.setResultToToast("Mission is not ready !");
+            return;
+        }
+
         WAYPOINT_COUNT = mission.getWaypointCount();
         DJIError djiError = waypointMissionOperator.loadMission(mission);
         showResultToast(djiError);
