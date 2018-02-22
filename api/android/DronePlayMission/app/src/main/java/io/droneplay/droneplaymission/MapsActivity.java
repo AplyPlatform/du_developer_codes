@@ -105,6 +105,8 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     protected FlightMode flightState = null;
     private SupportMapFragment mapFragment;
 
+    private int markerid = 0;
+
     private List<String> missingPermission = new ArrayList<>();
 
     private AtomicBoolean isRegistrationInProgress = new AtomicBoolean(false);
@@ -387,13 +389,17 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
             public void onMapClick(LatLng latLng) {
                 Log.d(TAG, "onMapClick");
 
-                String markerName = mMarkers.size() + ":" + Math.round(latLng.latitude) + "," + Math.round(latLng.longitude);
+                String markerName = markerid + "";
                 final MarkerOptions nMarker = new MarkerOptions().position(latLng)
                         .title(markerName)
                         .snippet(markerName);
                 mMarkers.put(markerName, nMarker);
                 mMap.addMarker(nMarker);
-                textView.setText(markerName);
+                
+                String showText = String.format("Count: %d\nLat: %.4f, Lng: %.4f", mMarkers.size(), latLng.latitude, latLng.longitude);
+                textView.setText(showText);
+
+                markerid++;
             }
         });
 
@@ -404,7 +410,8 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                 if (doubleBackToExitPressedOnce) {
                     mMarkers.remove(marker.getTitle());
                     marker.remove();
-                    textView.setText("");
+                    String showText = String.format("Count: %d", mMarkers.size());
+                    textView.setText(showText);
                 } else {
                     MapsActivity.this.doubleBackToExitPressedOnce = true;
                     new Handler().postDelayed(new Runnable() {
