@@ -19,6 +19,17 @@
             android:layout_width="70dp"
             android:layout_height="40dp" />
 
+
+        <Button
+            android:id="@+id/uploadButton"
+            android:layout_marginRight="10dp"
+            android:padding="5dp"
+            android:background="#337"
+            android:textColor="#fff"
+            android:text="Apply"
+            android:layout_width="70dp"
+            android:layout_height="40dp" />
+
         <Button
             android:id="@+id/goButton"
             android:layout_marginRight="10dp"

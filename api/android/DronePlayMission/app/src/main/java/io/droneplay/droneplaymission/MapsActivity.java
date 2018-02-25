@@ -1,9 +1,9 @@
 package io.droneplay.droneplaymission;
 
 import android.Manifest;
-import android.content.Context;
-import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageManager;
+import android.location.Location;
+import android.location.LocationManager;
 import android.os.AsyncTask;
 import android.os.Build;
 import android.os.Handler;
@@ -80,6 +80,8 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
     private Button mapClearButton;
     private Button goButton;
+    private Button uploadButton;
+
     private TextView textView;
     private GoogleMap mMap;
 
@@ -101,7 +103,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
     protected double homeLatitude = 181;
     protected double homeLongitude = 181;
-    final float baseAltitude = 20.0f;
+    final float baseAltitude = 10.0f;
     protected FlightMode flightState = null;
     private SupportMapFragment mapFragment;
 
@@ -136,6 +138,8 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         textView = (TextView) findViewById(R.id.mapMon);
         mapClearButton = (Button) findViewById(R.id.mapClearButton);
         goButton = (Button) findViewById(R.id.goButton);
+        uploadButton = (Button) findViewById(R.id.uploadButton);
+        goButton.setEnabled(false);
 
         dapi = new DronePlayAPI(this);
         manager = new WaypointManager();
@@ -186,24 +190,16 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
     }
 
-
-    private void prepareMission() {
-        if (waypointMissionOperator == null) {
-            waypointMissionOperator = MissionControl.getInstance().getWaypointMissionOperator();
+    private Location getCurrentLocation() {
+        LocationManager locationManager = (LocationManager) getSystemService(LOCATION_SERVICE);
+        if (locationManager != null) {
+            return locationManager.getLastKnownLocation(LocationManager.GPS_PROVIDER);
         }
 
-        mission = manager.getWaypointMission();
-        if (mission == null) {
-            ToastUtils.setResultToToast("Mission is not ready !");
-            return;
-        }
-
-        WAYPOINT_COUNT = mission.getWaypointCount();
-        DJIError djiError = waypointMissionOperator.loadMission(mission);
-        showResultToast(djiError);
+        return null;
     }
 
-    private void startMission() {
+    private void uploadMission() {
         if (waypointMissionOperator == null) {
             waypointMissionOperator = MissionControl.getInstance().getWaypointMissionOperator();
         }
@@ -219,7 +215,38 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         } else {
             ToastUtils.setResultToToast("Not ready!");
         }
+        goButton.setEnabled(true);
+    }
 
+    private void prepareMission() {
+        manager.clear();
+        Set entrySet = mMarkers.entrySet();
+        // Obtaining an iterator for the entry set
+        Iterator it = entrySet.iterator();
+        while (it.hasNext()) {
+            Map.Entry me = (Map.Entry) it.next();
+            MarkerOptions m = (MarkerOptions) me.getValue();
+            manager.addWaypointMission(m.getPosition().latitude, m.getPosition().longitude, baseAltitude, 1);
+        }
+
+        mission = manager.getWaypointMission();
+        if (mission == null) {
+            ToastUtils.setResultToToast("Mission is not ready !");
+            return;
+        }
+
+        if (waypointMissionOperator == null) {
+            waypointMissionOperator = MissionControl.getInstance().getWaypointMissionOperator();
+        }
+
+        WAYPOINT_COUNT = mission.getWaypointCount();
+        DJIError djiError = waypointMissionOperator.loadMission(mission);
+        showResultToast(djiError);
+
+        uploadMission();
+    }
+
+    private void startMission() {
         if (mission != null) {
             waypointMissionOperator.startMission(new CommonCallbacks.CompletionCallback() {
                 @Override
@@ -227,10 +254,11 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                     showResultToast(djiError);
                 }
             });
-
         } else {
             ToastUtils.setResultToToast("Prepare Mission First!");
         }
+
+
     }
 
     private void stopMission() {
@@ -345,7 +373,17 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     public void onMapReady(GoogleMap googleMap) {
         mMap = googleMap;
 
-        LatLng dockdo = new LatLng(37.2412061, 131.8617358);
+        LatLng dockdo;
+
+        Location lc = getCurrentLocation();
+        if (lc != null) {
+            dockdo = new LatLng(lc.getLatitude(), lc.getLongitude());
+        }
+        else {
+            dockdo = new LatLng(37.2412061, 131.8617358);
+        }
+
+
         //mMap.addMarker(new MarkerOptions().position(dockdo).title("Marker in Dokdo"));
         mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(dockdo, 20));
 
@@ -359,22 +397,17 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
             }
         });
 
+        uploadButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                prepareMission();
+            }
+        });
+
         goButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-
                 if (bMissionState == false) {
-                    manager.clear();
-                    Set entrySet = mMarkers.entrySet();
-                    // Obtaining an iterator for the entry set
-                    Iterator it = entrySet.iterator();
-                    while (it.hasNext()) {
-                        Map.Entry me = (Map.Entry) it.next();
-                        MarkerOptions m = (MarkerOptions) me.getValue();
-                        manager.addWaypointMission(m.getPosition().latitude, m.getPosition().longitude, baseAltitude, 1);
-                    }
-
-                    prepareMission();
                     startMission();
                 }
                 else {
@@ -395,9 +428,10 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                         .snippet(markerName);
                 mMarkers.put(markerName, nMarker);
                 mMap.addMarker(nMarker);
-                
+
                 String showText = String.format("Count: %d\nLat: %.4f, Lng: %.4f", mMarkers.size(), latLng.latitude, latLng.longitude);
                 textView.setText(showText);
+
 
                 markerid++;
             }
