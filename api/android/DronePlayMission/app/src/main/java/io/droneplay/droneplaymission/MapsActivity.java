@@ -40,7 +40,6 @@ import dji.common.error.DJIError;
 import dji.common.error.DJISDKError;
 import dji.common.flightcontroller.FlightControllerState;
 import dji.common.flightcontroller.FlightMode;
-import dji.common.mission.waypoint.Waypoint;
 import dji.common.mission.waypoint.WaypointMission;
 import dji.common.mission.waypoint.WaypointMissionDownloadEvent;
 import dji.common.mission.waypoint.WaypointMissionExecutionEvent;
@@ -209,13 +208,16 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
             waypointMissionOperator.uploadMission(new CommonCallbacks.CompletionCallback() {
                 @Override
                 public void onResult(DJIError djiError) {
-                    showResultToast(djiError);
+
+                    if (djiError != null)
+                        showResultToast(djiError);
+                    else
+                        goButton.setEnabled(true);
                 }
             });
         } else {
             ToastUtils.setResultToToast("Not ready!");
         }
-        goButton.setEnabled(true);
     }
 
     private void prepareMission() {
@@ -241,9 +243,10 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
         WAYPOINT_COUNT = mission.getWaypointCount();
         DJIError djiError = waypointMissionOperator.loadMission(mission);
-        showResultToast(djiError);
-
-        uploadMission();
+        if (djiError != null)
+            showResultToast(djiError);
+        else
+            uploadMission();
     }
 
     private void startMission() {
@@ -257,8 +260,6 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         } else {
             ToastUtils.setResultToToast("Prepare Mission First!");
         }
-
-
     }
 
     private void stopMission() {
@@ -522,20 +523,6 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                                 ? ""
                                 : waypointMissionExecutionEvent.getProgress().targetWaypointIndex));
 
-                int idx = waypointMissionExecutionEvent.getProgress().targetWaypointIndex;
-                List<Waypoint> wlist = mission.getWaypointList();
-                Waypoint w = wlist.get(idx);
-                LatLng latLng = new LatLng(w.coordinate.getLatitude(), w.coordinate.getLongitude());
-
-                dapi.sendMyPosition(latLng.latitude, latLng.longitude, w.altitude);
-
-                String markerName = mMarkers.size() + ":" + Math.round(w.coordinate.getLatitude()) + "," + Math.round(w.coordinate.getLongitude());
-                final MarkerOptions nMarker = new MarkerOptions().position(latLng)
-                        .title(markerName)
-                        .snippet(markerName);
-                mMap.addMarker(nMarker);
-                textView.setText(markerName);
-
                 updateWaypointMissionState();
             }
 
@@ -566,25 +553,13 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     }
 
     private void updateWaypointMissionState(){
-        if (waypointMissionOperator != null && waypointMissionOperator.getCurrentState() != null) {
-            /*ToastUtils.setResultToText(FCPushInfoTV,
-                    "home point latitude: "
-                            + homeLatitude
-                            + "\nhome point longitude: "
-                            + homeLongitude
-                            + "\nFlight state: "
-                            + flightState.name()
-                            + "\nCurrent Waypointmission state : "
-                            + waypointMissionOperator.getCurrentState().getName());*/
-        } else {
-            /*ToastUtils.setResultToText(FCPushInfoTV,
-                    "home point latitude: "
-                            + homeLatitude
-                            + "\nhome point longitude: "
-                            + homeLongitude
-                            + "\nFlight state: "
-                            + flightState.name());*/
-        }
+        dapi.sendMyPosition(homeLatitude, homeLongitude, baseAltitude);
+        String markerName = mMarkers.size() + ":" + Math.round(homeLatitude) + "," + Math.round(homeLongitude);
+        final MarkerOptions nMarker = new MarkerOptions().position(new LatLng(homeLatitude, homeLongitude))
+                .title(markerName)
+                .snippet(markerName);
+        mMap.addMarker(nMarker);
+        textView.setText(markerName);
     }
 
     private void tearDownListener() {
