@@ -9,7 +9,7 @@
 
 + 지도를 터치하여 마크가 된 모든 장소로 드론이 방문하는 코드 예제 입니다.
 + 각 장소를 방문할때 마다 해당 장소의 좌표를 DronePlay API를 호출하여 기록합니다.
-+ 개발환경 - Android Studio : 3.0, gradle version : 3.0.1
++ 개발환경 - Android Studio, gradle
 <pre>
 <code>
 compileSdkVersion 26
