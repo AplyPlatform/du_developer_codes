@@ -6,4 +6,5 @@
     </string>
     <string name="sdk_registration_success_message">SDK Registered Successfully</string>
     <string name="sdk_registration_doing_message">Registering, pls wait...</string>
+    <string name="title_activity_title_input_dialog">TitleInputDialogActivity</string>
 </resources>

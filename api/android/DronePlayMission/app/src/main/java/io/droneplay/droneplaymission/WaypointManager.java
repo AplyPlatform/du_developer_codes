@@ -1,5 +1,6 @@
 package io.droneplay.droneplaymission;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
@@ -25,32 +26,68 @@ import static dji.keysdk.FlightControllerKey.HOME_LOCATION_LONGITUDE;
 public class WaypointManager {
 
     private static final double ONE_METER_OFFSET = 0.00000899322;
-    private List<Waypoint> mwaypointList;
+    private List<Waypoint> mwaypointList = new ArrayList<>();
+    private List<WaypointData>  tempwaypointList;
 
-    public WaypointManager() {
-        mwaypointList = new ArrayList<>();
+    public WaypointManager(String buttonID) {
+        tempwaypointList = HelperUtils.loadMissionsFromFile(buttonID);
     }
-
 
     public void clear() {
         mwaypointList.clear();
+        tempwaypointList.clear();
     }
 
-    public int addWaypointMission(double baseLatitude, double baseLongitude, float baseAltitude, int action) {
-        Waypoint eachWaypoint = new Waypoint(baseLatitude,baseLongitude, baseAltitude);
+    public void removeAction(String index) {
+        for( WaypointData data : tempwaypointList) {
+            if (data.id == index) {
+                tempwaypointList.remove(data);
+                return;
+            }
+        }
+    }
 
+    public void saveMissionToFile(String buttonID) {
 
-                switch (action) {
-                    case 0:
-                        eachWaypoint.addAction(new WaypointAction(WaypointActionType.STAY, 1));
-                        break;
-                    case 1:
-                        eachWaypoint.addAction(new WaypointAction(WaypointActionType.START_TAKE_PHOTO, 1));
-                        break;
-                    case 2:
-                        eachWaypoint.addAction(new WaypointAction(WaypointActionType.START_RECORD, 1));
-                        eachWaypoint.addAction(new WaypointAction(WaypointActionType.STOP_RECORD, 1));
-                        break;
+        if (tempwaypointList.size() <= 0) return;
+
+        try {
+            HelperUtils.saveMissionsToFile(buttonID, tempwaypointList);
+        } catch (IOException e) {
+            //
+        }
+    }
+
+    public int addAction(String markerName, double lat, double lng, float alt, int action) {
+        WaypointData data = new WaypointData();
+        data.action = action;
+        data.id = markerName;
+        data.alt = alt;
+        data.lng = lng;
+        data.lat = lat;
+        tempwaypointList.add(data);
+        return tempwaypointList.size();
+    }
+
+    public WaypointMission getWaypointMission() {
+        if (tempwaypointList.size() <= 0) return null;
+
+        mwaypointList.clear();
+
+        for( WaypointData data : tempwaypointList ) {
+
+            Waypoint eachWaypoint = new Waypoint(data.lat,data.lng,data.alt);
+            switch (data.action) {
+                case 0:
+                    eachWaypoint.addAction(new WaypointAction(WaypointActionType.STAY, 1));
+                    break;
+                case 1:
+                    eachWaypoint.addAction(new WaypointAction(WaypointActionType.START_TAKE_PHOTO, 1));
+                    break;
+                case 2:
+                    eachWaypoint.addAction(new WaypointAction(WaypointActionType.START_RECORD, 1));
+                    eachWaypoint.addAction(new WaypointAction(WaypointActionType.STOP_RECORD, 1));
+                    break;
                     /*
                     case 3:
                         eachWaypoint.addAction(new WaypointAction(WaypointActionType.GIMBAL_PITCH,
@@ -62,24 +99,20 @@ public class WaypointManager {
                         break;
                     */
 
-                    default:
-                        eachWaypoint.addAction(new WaypointAction(WaypointActionType.START_TAKE_PHOTO, 1));
-                        break;
-                }
+                default:
+                    eachWaypoint.addAction(new WaypointAction(WaypointActionType.START_TAKE_PHOTO, 1));
+                    break;
+            }
 
-        mwaypointList.add(eachWaypoint);
+            mwaypointList.add(eachWaypoint);
+        }
 
-        return mwaypointList.size();
-    }
-
-    public WaypointMission getWaypointMission() {
-        if (mwaypointList.size() <= 0) return null;
         WaypointMission.Builder mbuilder = new WaypointMission.Builder();
 
         mbuilder.autoFlightSpeed(5f);
         mbuilder.maxFlightSpeed(10f);
         mbuilder.setExitMissionOnRCSignalLostEnabled(false);
-        mbuilder.finishedAction(WaypointMissionFinishedAction.NO_ACTION);
+        mbuilder.finishedAction(WaypointMissionFinishedAction.GO_HOME);
         mbuilder.flightPathMode(WaypointMissionFlightPathMode.NORMAL);
         mbuilder.gotoFirstWaypointMode(WaypointMissionGotoWaypointMode.SAFELY);
         mbuilder.headingMode(WaypointMissionHeadingMode.AUTO);
