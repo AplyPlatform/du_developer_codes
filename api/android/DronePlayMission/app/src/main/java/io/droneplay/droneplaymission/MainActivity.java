@@ -3,6 +3,7 @@ package io.droneplay.droneplaymission;
 import android.Manifest;
 import android.content.Context;
 import android.content.DialogInterface;
+import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.os.AsyncTask;
 import android.os.Build;
@@ -26,12 +27,17 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 import dji.common.error.DJIError;
 import dji.common.error.DJISDKError;
+import dji.common.mission.waypoint.WaypointMission;
+import dji.common.mission.waypoint.WaypointMissionState;
+import dji.common.util.CommonCallbacks;
 import dji.log.DJILog;
 import dji.sdk.base.BaseComponent;
 import dji.sdk.base.BaseProduct;
+import dji.sdk.mission.MissionControl;
+import dji.sdk.mission.waypoint.WaypointMissionOperator;
 import dji.sdk.sdkmanager.DJISDKManager;
 
-public class MainActivity extends AppCompatActivity implements MainListAdapter.ListBtnClickListener, HelperUtils.newBtnClickListener {
+public class MainActivity extends AppCompatActivity implements MainListAdapter.ListBtnClickListener, HelperUtils.titleInputClickListener {
 
     ListView listview ;
     MainListAdapter adapter;
@@ -203,6 +209,51 @@ public class MainActivity extends AppCompatActivity implements MainListAdapter.L
         adapter.setItems(list);
     }
 
+    private void uploadMission(final String buttonID) {
+        WaypointMissionOperator waypointMissionOperator = MissionControl.getInstance().getWaypointMissionOperator();
+
+        if (WaypointMissionState.READY_TO_RETRY_UPLOAD.equals(waypointMissionOperator.getCurrentState())
+                || WaypointMissionState.READY_TO_UPLOAD.equals(waypointMissionOperator.getCurrentState())) {
+            waypointMissionOperator.uploadMission(new CommonCallbacks.CompletionCallback() {
+                @Override
+                public void onResult(DJIError djiError) {
+
+                    if (djiError != null)
+                        showResultToast(djiError);
+                    else {
+                        Intent intent = new Intent(MainActivity.this, MissionRunActivity.class);
+                        intent.putExtra(MissionRunActivity.PARAM_BUTTON_ID, buttonID);
+                        startActivity(intent);
+                    }
+                }
+            });
+        } else {
+            ToastUtils.setResultToToast("Not ready!");
+        }
+    }
+
+    private void prepareMission(String buttonID) {
+        if (HelperUtils.isExistMission(buttonID) == false) {
+            ToastUtils.setResultToToast("Mission is not ready !");
+            return;
+        }
+
+        WaypointManager.getInstance().setMission(buttonID);
+        WaypointMission mission = WaypointManager.getInstance().getWaypointMission();
+
+        if (mission == null) {
+            ToastUtils.setResultToToast("Mission is not ready !");
+            return;
+        }
+
+        DJIError djiError = MissionControl.getInstance().getWaypointMissionOperator().loadMission(mission);
+        if (djiError != null)
+            showResultToast(djiError);
+        else
+            uploadMission(buttonID);
+    }
+
+
     public void showYesNoDialog(final MainListAdapter.CLICK_TYPE kind, final String buttonId) {
 
         String strMsg = "Are you sure ?";
@@ -223,7 +274,7 @@ public class MainActivity extends AppCompatActivity implements MainListAdapter.L
                     case DialogInterface.BUTTON_POSITIVE:
                         switch(kind) {
                             case RUN:
-                                //TODO
+                                prepareMission(buttonId);
                                 break;
 
                             case DELETE:
@@ -256,13 +307,20 @@ public class MainActivity extends AppCompatActivity implements MainListAdapter.L
                 break;
 
             case EDIT:
+                Intent intent = new Intent(MainActivity.this, MapsActivity.class);
+                intent.putExtra(MissionRunActivity.PARAM_BUTTON_ID, buttonId);
+                startActivity(intent);
                 break;
         }
 
     }
 
     @Override
-    public void onNewBtnClick(String buttonTitle) {
+    public void onTitileInputClick(String buttonTitle) {
         addButton(buttonTitle);
+    }
+
+    private void showResultToast(DJIError djiError) {
+        ToastUtils.setResultToToast(djiError == null ? "Action started!" : djiError.getDescription());
     }
 }

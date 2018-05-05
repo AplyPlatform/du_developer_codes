@@ -25,11 +25,26 @@ import static dji.keysdk.FlightControllerKey.HOME_LOCATION_LONGITUDE;
 
 public class WaypointManager {
 
+    private static WaypointManager uniqueInstance;
+
     private static final double ONE_METER_OFFSET = 0.00000899322;
     private List<Waypoint> mwaypointList = new ArrayList<>();
     private List<WaypointData>  tempwaypointList;
 
-    public WaypointManager(String buttonID) {
+    public static WaypointManager getInstance() {
+
+        if (uniqueInstance == null) {
+            uniqueInstance = new WaypointManager();
+        }
+
+        return uniqueInstance;
+    }
+
+    public WaypointManager() {
+
+    }
+
+    public void setMission(String buttonID) {
         tempwaypointList = HelperUtils.loadMissionsFromFile(buttonID);
     }
 

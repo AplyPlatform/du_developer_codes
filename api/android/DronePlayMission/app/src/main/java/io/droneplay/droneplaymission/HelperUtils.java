@@ -8,30 +8,24 @@ import android.support.v7.app.AlertDialog;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.widget.EditText;
+import android.widget.Toast;
 
+import com.google.android.gms.maps.model.LatLng;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.reflect.TypeToken;
 
-import org.json.JSONArray;
-import org.json.JSONException;
-import org.json.JSONObject;
 
 import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
-import java.io.FileReader;
-import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
-import java.io.ObjectInputStream;
-import java.io.ObjectOutputStream;
 import java.io.OutputStream;
 import java.io.OutputStreamWriter;
-import java.io.Writer;
 import java.lang.reflect.Type;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
@@ -290,11 +284,11 @@ public class HelperUtils {
         return randomStringBuilder.toString();
     }
 
-    public interface newBtnClickListener {
-        void onNewBtnClick(String buttonTitle) ;
+    public interface titleInputClickListener {
+        void onTitileInputClick(String buttonTitle) ;
     }
 
-    public static void showTitleInputDialog(Context c, final newBtnClickListener listener) {
+    public static void showTitleInputDialog(Context c, final titleInputClickListener listener) {
         LayoutInflater layoutInflaterAndroid = LayoutInflater.from(c);
         View mView = layoutInflaterAndroid.inflate(R.layout.layout_titleinput, null);
         AlertDialog.Builder alertDialogBuilderUserInput = new AlertDialog.Builder(c);
@@ -305,7 +299,47 @@ public class HelperUtils {
                 .setCancelable(false)
                 .setPositiveButton("Make", new DialogInterface.OnClickListener() {
                     public void onClick(DialogInterface dialogBox, int id) {
-                        listener.onNewBtnClick(userInputDialogEditText.getText().toString());
+                        listener.onTitileInputClick(userInputDialogEditText.getText().toString());
+                    }
+                })
+
+                .setNegativeButton("Cancel",
+                        new DialogInterface.OnClickListener() {
+                            public void onClick(DialogInterface dialogBox, int id) {
+                                dialogBox.cancel();
+                            }
+                        });
+
+        AlertDialog alertDialogAndroid = alertDialogBuilderUserInput.create();
+        alertDialogAndroid.show();
+    }
+
+    public interface markerDataInputClickListener {
+        void onMarkerDataInputClick(int altitude, LatLng latLng) ;
+    }
+
+    public static void showMarkerDataInputDialog(final Context c, final LatLng latLng, final markerDataInputClickListener listener) {
+        LayoutInflater layoutInflaterAndroid = LayoutInflater.from(c);
+        View mView = layoutInflaterAndroid.inflate(R.layout.layout_marker_datainput, null);
+        AlertDialog.Builder alertDialogBuilderUserInput = new AlertDialog.Builder(c);
+        alertDialogBuilderUserInput.setView(mView);
+
+        final EditText altitudeEdt = mView.findViewById(R.id.altitude);
+
+        final EditText userInputDialogEditText = (EditText) mView.findViewById(R.id.userInputDialog);
+        alertDialogBuilderUserInput
+                .setCancelable(false)
+                .setPositiveButton("OK", new DialogInterface.OnClickListener() {
+                    public void onClick(DialogInterface dialogBox, int id) {
+
+                        String altitudeText = altitudeEdt.getText().toString();
+                        int altitude = Integer.parseInt(altitudeText);
+                        if (altitude == 0 || altitude > 500) {
+                            Toast.makeText(c, "Invalid altitude", Toast.LENGTH_SHORT).show();
+                            return;
+                        }
+
+                        listener.onMarkerDataInputClick(altitude, latLng);
                     }
                 })
 

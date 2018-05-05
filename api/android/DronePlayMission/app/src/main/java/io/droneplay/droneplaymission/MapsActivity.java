@@ -1,5 +1,6 @@
 package io.droneplay.droneplaymission;
 
+import android.content.Context;
 import android.content.Intent;
 import android.location.Location;
 import android.location.LocationManager;
@@ -23,7 +24,7 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 
-public class MapsActivity extends FragmentActivity implements OnMapReadyCallback {
+public class MapsActivity extends FragmentActivity implements OnMapReadyCallback, HelperUtils.markerDataInputClickListener {
 
     private static final String TAG = MapsActivity.class.getSimpleName();
 
@@ -40,18 +41,18 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     private final Map<String, MarkerOptions> mMarkers = new ConcurrentHashMap<String, MarkerOptions>();
 
     private boolean doubleBackToExitPressedOnce = false;
-
-    final float baseAltitude = 10.0f;
     private SupportMapFragment mapFragment;
 
     private int markerid = 0;
 
+    private Context mContext;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
         setContentView(R.layout.activity_maps);
+        mContext = this;
         // Obtain the SupportMapFragment and get notified when the map is ready to be used.
         mapFragment = (SupportMapFragment) getSupportFragmentManager()
                 .findFragmentById(R.id.map);
@@ -61,7 +62,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         textView = (TextView) findViewById(R.id.mapMon);
         clearButton = (Button) findViewById(R.id.clearButton);
         saveButton = (Button) findViewById(R.id.saveButton);
-
+        manager = WaypointManager.getInstance();
     }
 
     @Override
@@ -69,8 +70,8 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         super.onResume();  // Always call the superclass method first
 
         Intent i = getIntent();
-        buttonID = i.getStringExtra("buttonID");
-        manager = new WaypointManager(buttonID);
+        buttonID = i.getStringExtra(MissionRunActivity.PARAM_BUTTON_ID);
+        manager.setMission(buttonID);
     }
 
     @Override
@@ -137,17 +138,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
             public void onMapClick(LatLng latLng) {
                 Log.d(TAG, "onMapClick");
 
-                String markerName = markerid + "";
-                final MarkerOptions nMarker = new MarkerOptions().position(latLng)
-                        .title(markerName)
-                        .snippet(markerName);
-                mMarkers.put(markerName, nMarker);
-                mMap.addMarker(nMarker);
-
-                String showText = String.format("Count: %d\nLat: %.4f, Lng: %.4f", mMarkers.size(), latLng.latitude, latLng.longitude);
-                textView.setText(showText);
-                manager.addAction(markerName,latLng.latitude,latLng.longitude, baseAltitude, 0);
-                markerid++;
+                addMarkerToClickPoint(latLng);
             }
         });
 
@@ -177,6 +168,28 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
 
         });
+
+
+    }
+
+
+    private void addMarkerToClickPoint(LatLng latLng) {
+        HelperUtils.showMarkerDataInputDialog(mContext, latLng, this);
+    }
+
+    @Override
+    public void onMarkerDataInputClick(int altitude, LatLng latLng) {
+        String markerName = markerid + "";
+        final MarkerOptions nMarker = new MarkerOptions().position(latLng)
+                .title(markerName)
+                .snippet(markerName);
+        mMarkers.put(markerName, nMarker);
+        mMap.addMarker(nMarker);
+
+        String showText = String.format("Count: %d\nLat: %.4f, Lng: %.4f", mMarkers.size(), latLng.latitude, latLng.longitude);
+        textView.setText(showText);
+        manager.addAction(markerName,latLng.latitude,latLng.longitude, altitude, 0);
+        markerid++;
     }
 
     @Override
