@@ -40,7 +40,8 @@ public class HelperUtils {
         if (!dir.exists()) {
             return false;
         }
-        path += "missons_" + buttonid;
+
+        path += "missions_" + buttonid;
         File data = new File(path);
         return data.exists();
     }
@@ -49,9 +50,9 @@ public class HelperUtils {
         String path = Environment.getExternalStorageDirectory().getAbsolutePath()  + File.separator + "/DronePlay/AppData" + File.separator;
         File dir = new File(path);
         if (!dir.exists()) {
-            dir.mkdirs();
+            return;
         }
-        path += "missons_" + buttonid;
+        path += "missions_" + buttonid;
         File data = new File(path);
         data.delete();
     }
@@ -62,7 +63,7 @@ public class HelperUtils {
         if (!dir.exists()) {
             dir.mkdirs();
         }
-        path += "missons_" + buttonid;
+        path += "missions_" + buttonid;
 
         File data = new File(path);
         if(!data.exists()) {
@@ -109,16 +110,16 @@ public class HelperUtils {
 
     public static List<WaypointData> loadMissionsFromFile(String buttonid) {
         String path = Environment.getExternalStorageDirectory().getAbsolutePath()  + File.separator + "/DronePlay/AppData" + File.separator;
-        path += "missons_" + buttonid;
+        path += "missions_" + buttonid;
 
         File data = new File(path);
         if(!data.exists()) {
             return new ArrayList<WaypointData>();
         }
 
-        List<WaypointData> jsonData = null;
+        List<WaypointData> jsonData = new ArrayList<WaypointData>();
 
-        InputStream inputStream = null;
+        InputStream inputStream;
         Gson gson = new GsonBuilder().enableComplexMapKeySerialization().setPrettyPrinting()
                 .create();
         try {
@@ -135,14 +136,10 @@ public class HelperUtils {
             jsonData = gson.fromJson(streamReader, type);
             streamReader.close();
 
-            return jsonData;
-
         } catch (FileNotFoundException e) {
-            return new ArrayList<WaypointData>();
         } catch (IOException e) {
-            return new ArrayList<WaypointData>();
         } finally {
-            return new ArrayList<WaypointData>();
+            return jsonData;
         }
     }
 

@@ -1,7 +1,10 @@
-package io.droneplay.droneplaymission;
+package io.droneplay.droneplaymission.Activity;
 
+import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
+import android.content.IntentFilter;
+import android.graphics.Matrix;
 import android.graphics.SurfaceTexture;
 import android.location.Location;
 import android.location.LocationManager;
@@ -26,7 +29,10 @@ import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.MarkerOptions;
 
 import java.util.Map;
+import java.util.Timer;
+import java.util.TimerTask;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.TimeUnit;
 
 import dji.common.camera.SettingsDefinitions;
 import dji.common.camera.SystemState;
@@ -38,6 +44,7 @@ import dji.common.mission.waypoint.WaypointMissionState;
 import dji.common.mission.waypoint.WaypointMissionUploadEvent;
 import dji.common.product.Model;
 import dji.common.util.CommonCallbacks;
+import dji.midware.usb.P3.UsbAccessoryService;
 import dji.sdk.base.BaseProduct;
 import dji.sdk.camera.Camera;
 import dji.sdk.camera.VideoFeeder;
@@ -47,6 +54,12 @@ import dji.sdk.mission.MissionControl;
 import dji.sdk.mission.waypoint.WaypointMissionOperator;
 import dji.sdk.mission.waypoint.WaypointMissionOperatorListener;
 import dji.sdk.products.Aircraft;
+import io.droneplay.droneplaymission.DronePlayAPI;
+import io.droneplay.droneplaymission.DronePlayMissionApplication;
+import io.droneplay.droneplaymission.ModuleVerificationUtil;
+import io.droneplay.droneplaymission.R;
+import io.droneplay.droneplaymission.ToastUtils;
+import io.droneplay.droneplaymission.WaypointManager;
 
 
 public class MissionRunActivity extends FragmentActivity implements OnMapReadyCallback
@@ -60,12 +73,24 @@ public class MissionRunActivity extends FragmentActivity implements OnMapReadyCa
 
     private String buttonID;
 
+
+
+    private Timer timer = new Timer();
+    private long timeCounter = 0;
+    private long hours = 0;
+    private long minutes = 0;
+    private long seconds = 0;
+    private String time = "";
+
     private TextView textView;
-    private GoogleMap mMap;
+    private GoogleMap  mMap = null;
 
     private int WAYPOINT_COUNT = 0;
 
     private DronePlayAPI dapi;
+
+    private int videoWidth;
+    private int videoHeight;
 
     protected FlightController flightController;
     protected VideoFeeder.VideoDataCallback mReceivedVideoDataCallBack = null;
@@ -94,59 +119,40 @@ public class MissionRunActivity extends FragmentActivity implements OnMapReadyCa
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
+        mContext = this;
+
         DronePlayMissionApplication.getEventBus().register(mContext);
 
         setContentView(R.layout.activity_run);
-
-        mContext = this;
-        // Obtain the SupportMapFragment and get notified when the map is ready to be used.
 
         dapi = new DronePlayAPI(mContext);
         manager = WaypointManager.getInstance();
         waypointMissionOperator = MissionControl.getInstance().getWaypointMissionOperator();
 
         initUI();
+    }
 
-        mReceivedVideoDataCallBack = new VideoFeeder.VideoDataCallback() {
-            @Override
-            public void onReceive(byte[] videoBuffer, int size) {
-                if (mCodecManager != null) {
-                    mCodecManager.sendDataToDecoder(videoBuffer, size);
-                }
-            }
-        };
-
-        handler = new Handler();
-
-        Camera camera = DronePlayMissionApplication.getProductInstance().getCamera();
-        if (camera != null) {
-            camera.setSystemStateCallback(new SystemState.Callback() {
+    private void uploadMission() {
+        if (WaypointMissionState.READY_TO_RETRY_UPLOAD.equals(waypointMissionOperator.getCurrentState())
+                || WaypointMissionState.READY_TO_UPLOAD.equals(waypointMissionOperator.getCurrentState())) {
+            waypointMissionOperator.uploadMission(new CommonCallbacks.CompletionCallback() {
                 @Override
-                public void onUpdate(SystemState cameraSystemState) {
-                    if (null != cameraSystemState) {
-                        int recordTime = cameraSystemState.getCurrentVideoRecordingTimeInSeconds();
-                        int minutes = (recordTime % 3600) / 60;
-                        int seconds = recordTime % 60;
-                        final String timeString = String.format("%02d:%02d", minutes, seconds);
-                        final boolean isVideoRecording = cameraSystemState.isRecording();
-                        MissionRunActivity.this.runOnUiThread(new Runnable() {
+                public void onResult(DJIError djiError) {
+                    if (djiError != null) {
+                        showResultToast(djiError);
+                    }
+                    else {
+                        waypointMissionOperator.startMission(new CommonCallbacks.CompletionCallback() {
                             @Override
-                            public void run() {
-                                recordingTime.setText(timeString);
-                                /*
-                                 * Update recordingTime TextView visibility and mRecordBtn's check state
-                                 */
-                                if (isVideoRecording){
-                                    recordingTime.setVisibility(View.VISIBLE);
-                                }else
-                                {
-                                    recordingTime.setVisibility(View.INVISIBLE);
-                                }
+                            public void onResult(DJIError djiError) {
+                                showResultToast(djiError);
                             }
                         });
                     }
                 }
             });
+        } else {
+            ToastUtils.setResultToToast("Not ready!");
         }
     }
 
@@ -167,10 +173,7 @@ public class MissionRunActivity extends FragmentActivity implements OnMapReadyCa
         mShootPhotoModeBtn = (Button) findViewById(R.id.btn_shoot_photo_mode);
         mRecordVideoModeBtn = (Button) findViewById(R.id.btn_record_video_mode);
 
-        if (null != mVideoSurface) {
-            mVideoSurface.setSurfaceTextureListener(this);
-        }
-
+        mVideoSurface.setSurfaceTextureListener(this);
         mCaptureBtn.setOnClickListener(this);
         mRecordBtn.setOnClickListener(this);
         mShootPhotoModeBtn.setOnClickListener(this);
@@ -190,17 +193,41 @@ public class MissionRunActivity extends FragmentActivity implements OnMapReadyCa
         });
     }
 
+    protected void changeDescription(final String newDescription) {
+        new Runnable() {
+            @Override
+            public void run() {
+                recordingTime.setText(newDescription);
+            }
+        };
+    }
     // Method for starting recording
     private void startRecord(){
+        if (!ModuleVerificationUtil.isCameraModuleAvailable()) return;
+
         final Camera camera = DronePlayMissionApplication.getProductInstance().getCamera();
         if (camera != null) {
-            camera.startRecordVideo(new CommonCallbacks.CompletionCallback(){
+            camera.startRecordVideo(new CommonCallbacks.CompletionCallback() {
                 @Override
-                public void onResult(DJIError djiError)
-                {
+                public void onResult(DJIError djiError) {
                     if (djiError == null) {
                         ToastUtils.setResultToToast("Record video: success");
-                    }else {
+                        timer = new Timer();
+                        timer.schedule(new TimerTask() {
+                            @Override
+                            public void run() {
+                                timeCounter = timeCounter + 1;
+                                hours = TimeUnit.MILLISECONDS.toHours(timeCounter);
+                                minutes =
+                                        TimeUnit.MILLISECONDS.toMinutes(timeCounter) - (hours * 60);
+                                seconds = TimeUnit.MILLISECONDS.toSeconds(timeCounter) - ((hours
+                                        * 60
+                                        * 60) + (minutes * 60));
+                                time = String.format("%02d:%02d:%02d", hours, minutes, seconds);
+                                changeDescription(time);
+                            }
+                        }, 0, 1);
+                    } else {
                         ToastUtils.setResultToToast(djiError.getDescription());
                     }
                 }
@@ -210,6 +237,8 @@ public class MissionRunActivity extends FragmentActivity implements OnMapReadyCa
 
     // Method for stopping recording
     private void stopRecord(){
+        if (!ModuleVerificationUtil.isCameraModuleAvailable()) return;
+
         Camera camera = DronePlayMissionApplication.getProductInstance().getCamera();
         if (camera != null) {
             camera.stopRecordVideo(new CommonCallbacks.CompletionCallback(){
@@ -218,6 +247,9 @@ public class MissionRunActivity extends FragmentActivity implements OnMapReadyCa
                 {
                     if(djiError == null) {
                         ToastUtils.setResultToToast("Stop recording: success");
+                        changeDescription("00:00:00");
+                        timer.cancel();
+                        timeCounter = 0;
                     }else {
                         ToastUtils.setResultToToast(djiError.getDescription());
                     }
@@ -229,7 +261,9 @@ public class MissionRunActivity extends FragmentActivity implements OnMapReadyCa
     @Override
     public void onSurfaceTextureAvailable(SurfaceTexture surface, int width, int height) {
         if (mCodecManager == null) {
-            mCodecManager = new DJICodecManager(this, surface, width, height);
+            mCodecManager = new DJICodecManager(this
+                    , surface, width, height
+                    , UsbAccessoryService.VideoStreamSource.Camera);
         }
     }
 
@@ -251,17 +285,50 @@ public class MissionRunActivity extends FragmentActivity implements OnMapReadyCa
 
     @Override
     public void onSurfaceTextureUpdated(SurfaceTexture surface) {
+        if (videoHeight != mCodecManager.getVideoHeight() || videoWidth != mCodecManager.getVideoWidth()) {
+            videoWidth = mCodecManager.getVideoWidth();
+            videoHeight = mCodecManager.getVideoHeight();
+            adjustAspectRatio(videoWidth, videoHeight);
+        }
     }
 
+    /**
+     * This method should not to be called until the size of `TextureView` is fixed.
+     */
+    private void adjustAspectRatio(int videoWidth, int videoHeight) {
+
+        int viewWidth = mVideoSurface.getWidth();
+        int viewHeight = mVideoSurface.getHeight();
+        double aspectRatio = (double) videoHeight / videoWidth;
+
+        int newWidth, newHeight;
+        if (viewHeight > (int) (viewWidth * aspectRatio)) {
+            // limited by narrow width; restrict height
+            newWidth = viewWidth;
+            newHeight = (int) (viewWidth * aspectRatio);
+        } else {
+            // limited by short height; restrict width
+            newWidth = (int) (viewHeight / aspectRatio);
+            newHeight = viewHeight;
+        }
+        int xoff = (viewWidth - newWidth) / 2;
+        int yoff = (viewHeight - newHeight) / 2;
+
+        Matrix txform = new Matrix();
+        mVideoSurface.getTransform(txform);
+        txform.setScale((float) newWidth / viewWidth, (float) newHeight / viewHeight);
+        txform.postTranslate(xoff, yoff);
+        mVideoSurface.setTransform(txform);
+    }
 
     private void initPreviewer() {
         BaseProduct product = DronePlayMissionApplication.getProductInstance();
         if (product == null || !product.isConnected()) {
             ToastUtils.setResultToToast("Disconnected");
         } else {
-            if (null != mVideoSurface) {
-                mVideoSurface.setSurfaceTextureListener(this);
-            }
+
+            mVideoSurface.setSurfaceTextureListener(this);
+
             if (!product.getModel().equals(Model.UNKNOWN_AIRCRAFT)) {
                 VideoFeeder.getInstance().getPrimaryVideoFeed().setCallback(mReceivedVideoDataCallBack);
             }
@@ -269,26 +336,61 @@ public class MissionRunActivity extends FragmentActivity implements OnMapReadyCa
     }
 
     private void uninitPreviewer() {
-        Camera camera = DronePlayMissionApplication.getProductInstance().getCamera();
-        if (camera != null){
-            // Reset the callback
-            VideoFeeder.getInstance().getPrimaryVideoFeed().setCallback(null);
-        }
+        VideoFeeder.getInstance().getPrimaryVideoFeed().setCallback(null);
     }
 
-    private void updateWaypointMissionState(){
+    private void updateWaypointMissionState() {
         dapi.sendMyPosition(currentLatitude, currentLongitude, currentAltitude);
         String markerName = mMarkers.size() + ":" + Math.round(currentLatitude) + "," + Math.round(currentLongitude);
         final MarkerOptions nMarker = new MarkerOptions().position(new LatLng(currentLatitude, currentLongitude))
                 .title(markerName)
                 .snippet(markerName);
-        mMap.addMarker(nMarker);
+        if(mMap != null)
+            mMap.addMarker(nMarker);
         textView.setText(markerName);
     }
 
 
     //region Not important stuff
     private void setUpListener() {
+
+        BaseProduct product = DronePlayMissionApplication.getProductInstance();
+
+        if (product == null || !product.isConnected()) {
+            ToastUtils.setResultToToast("Disconnect");
+            return;
+        } else {
+            if (product instanceof Aircraft) {
+                flightController = ((Aircraft) product).getFlightController();
+            }
+
+            if (flightController != null) {
+
+                flightController.setStateCallback(new FlightControllerState.Callback() {
+                    @Override
+                    public void onUpdate(@NonNull FlightControllerState flightControllerState) {
+                        currentLatitude = flightControllerState.getAircraftLocation().getLatitude();
+                        currentLongitude = flightControllerState.getAircraftLocation().getLongitude();
+                        currentAltitude = flightControllerState.getAircraftLocation().getAltitude();
+
+                        updateWaypointMissionState();
+                    }
+                });
+
+                mReceivedVideoDataCallBack = new VideoFeeder.VideoDataCallback() {
+                    @Override
+                    public void onReceive(byte[] videoBuffer, int size) {
+                        if (mCodecManager != null) {
+                            mCodecManager.sendDataToDecoder(videoBuffer, size, UsbAccessoryService.VideoStreamSource.Camera.getIndex());
+                        }
+                    }
+                };
+
+                handler = new Handler();
+            }
+        }
+
+
         // Example of Listener
         listener = new WaypointMissionOperatorListener() {
             @Override
@@ -333,7 +435,8 @@ public class MissionRunActivity extends FragmentActivity implements OnMapReadyCa
             public void onExecutionStart() {
                 ToastUtils.setResultToToast("Execution started!");
                 updateWaypointMissionState();
-                mMap.clear();
+                if(mMap != null)
+                    mMap.clear();
                 mapFragment.getView().setClickable(false);
                 bMissionState = true;
                 testButton.setText("STOP");
@@ -349,20 +452,8 @@ public class MissionRunActivity extends FragmentActivity implements OnMapReadyCa
             }
         };
 
-        if (waypointMissionOperator != null && listener != null) {
-            // Example of adding listeners
-            waypointMissionOperator.addListener(listener);
-        }
-
-        initPreviewer();
-        onProductChange();
-        if(mVideoSurface == null) {
-            Log.e(TAG, "mVideoSurface is null");
-        }
+        waypointMissionOperator.addListener(listener);
     }
-
-
-
 
     @Override
     public void onResume() {
@@ -372,40 +463,10 @@ public class MissionRunActivity extends FragmentActivity implements OnMapReadyCa
         buttonID = i.getStringExtra(PARAM_BUTTON_ID);
         manager.setMission(buttonID);
 
-        BaseProduct product = DronePlayMissionApplication.getProductInstance();
-
-        if (product == null || !product.isConnected()) {
-            ToastUtils.setResultToToast("Disconnect");
-            return;
-        } else {
-            if (product instanceof Aircraft) {
-                flightController = ((Aircraft) product).getFlightController();
-            }
-
-            if (flightController != null) {
-
-                flightController.setStateCallback(new FlightControllerState.Callback() {
-                    @Override
-                    public void onUpdate(@NonNull FlightControllerState flightControllerState) {
-                        currentLatitude = flightControllerState.getAircraftLocation().getLatitude();
-                        currentLongitude = flightControllerState.getAircraftLocation().getLongitude();
-                        currentAltitude = flightControllerState.getAircraftLocation().getAltitude();
-
-                        updateWaypointMissionState();
-                    }
-                });
-
-            }
-        }
-
         setUpListener();
+        initPreviewer();
         startMission();
     }
-
-    protected void onProductChange() {
-        initPreviewer();
-    }
-
 
     private void tearDownListener() {
         if (waypointMissionOperator != null && listener != null) {
@@ -443,25 +504,12 @@ public class MissionRunActivity extends FragmentActivity implements OnMapReadyCa
 
 
     private void startMission() {
-        if (waypointMissionOperator == null) {
-            waypointMissionOperator = MissionControl.getInstance().getWaypointMissionOperator();
-        }
-
         if (waypointMissionOperator.getCurrentState() == WaypointMissionState.EXECUTING) return;
 
-        waypointMissionOperator.startMission(new CommonCallbacks.CompletionCallback() {
-            @Override
-            public void onResult(DJIError djiError) {
-                showResultToast(djiError);
-            }
-        });
+        uploadMission();
     }
 
     private void stopMission() {
-        if (waypointMissionOperator == null) {
-            waypointMissionOperator = MissionControl.getInstance().getWaypointMissionOperator();
-        }
-
         // Example of stopping a Mission
         waypointMissionOperator.stopMission(new CommonCallbacks.CompletionCallback() {
             @Override
@@ -543,6 +591,8 @@ public class MissionRunActivity extends FragmentActivity implements OnMapReadyCa
     }
 
     private void switchCameraMode(SettingsDefinitions.CameraMode cameraMode) {
+        if (!ModuleVerificationUtil.isCameraModuleAvailable()) return;
+
         Camera camera = DronePlayMissionApplication.getProductInstance().getCamera();
         if (camera != null) {
             camera.setMode(cameraMode, new CommonCallbacks.CompletionCallback() {
@@ -560,13 +610,15 @@ public class MissionRunActivity extends FragmentActivity implements OnMapReadyCa
 
         // Method for taking photo
     private void captureAction() {
+        if (!ModuleVerificationUtil.isCameraModuleAvailable()) return;
+
         final Camera camera = DronePlayMissionApplication.getProductInstance().getCamera();
         if (camera != null) {
             SettingsDefinitions.ShootPhotoMode photoMode = SettingsDefinitions.ShootPhotoMode.SINGLE; // Set the camera capture mode as Single mode
             camera.setShootPhotoMode(photoMode, new CommonCallbacks.CompletionCallback(){
                 @Override
                 public void onResult(DJIError djiError) {
-                    if (null == djiError) {
+                    if (handler != null && null == djiError) {
                         handler.postDelayed(new Runnable() {
                             @Override
                             public void run() {

@@ -1,5 +1,8 @@
 package io.droneplay.droneplaymission;
 
+import android.content.Context;
+import android.widget.Toast;
+
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
@@ -62,14 +65,18 @@ public class WaypointManager {
         }
     }
 
-    public void saveMissionToFile(String buttonID) {
+    public void saveMissionToFile(Context context, String buttonID) {
 
-        if (tempwaypointList.size() <= 0) return;
+        if (tempwaypointList.size() <= 0) {
+            Toast.makeText(context, "At least, one mission point must be exist !!!", Toast.LENGTH_SHORT).show();
+            return;
+        }
 
         try {
             HelperUtils.saveMissionsToFile(buttonID, tempwaypointList);
+            Toast.makeText(context, "Successfully, Mission is saved.", Toast.LENGTH_SHORT).show();
         } catch (IOException e) {
-            //
+            Toast.makeText(context, "Failed to save mission !!!", Toast.LENGTH_SHORT).show();
         }
     }
 

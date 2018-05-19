@@ -1,4 +1,4 @@
-package io.droneplay.droneplaymission;
+package io.droneplay.droneplaymission.Activity;
 
 import android.Manifest;
 import android.content.Context;
@@ -13,13 +13,10 @@ import android.support.v4.content.ContextCompat;
 import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
-import android.util.Log;
 import android.view.View;
 import android.widget.Button;
 import android.widget.ListView;
 import android.widget.Toast;
-
-import com.squareup.otto.Subscribe;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -36,6 +33,12 @@ import dji.sdk.base.BaseProduct;
 import dji.sdk.mission.MissionControl;
 import dji.sdk.mission.waypoint.WaypointMissionOperator;
 import dji.sdk.sdkmanager.DJISDKManager;
+import io.droneplay.droneplaymission.HelperUtils;
+import io.droneplay.droneplaymission.MainListAdapter;
+import io.droneplay.droneplaymission.MainListItem;
+import io.droneplay.droneplaymission.R;
+import io.droneplay.droneplaymission.ToastUtils;
+import io.droneplay.droneplaymission.WaypointManager;
 
 public class MainActivity extends AppCompatActivity implements MainListAdapter.ListBtnClickListener, HelperUtils.titleInputClickListener {
 
@@ -209,29 +212,6 @@ public class MainActivity extends AppCompatActivity implements MainListAdapter.L
         adapter.setItems(list);
     }
 
-    private void uploadMission(final String buttonID) {
-        WaypointMissionOperator waypointMissionOperator = MissionControl.getInstance().getWaypointMissionOperator();
-
-        if (WaypointMissionState.READY_TO_RETRY_UPLOAD.equals(waypointMissionOperator.getCurrentState())
-                || WaypointMissionState.READY_TO_UPLOAD.equals(waypointMissionOperator.getCurrentState())) {
-            waypointMissionOperator.uploadMission(new CommonCallbacks.CompletionCallback() {
-                @Override
-                public void onResult(DJIError djiError) {
-
-                    if (djiError != null)
-                        showResultToast(djiError);
-                    else {
-                        Intent intent = new Intent(MainActivity.this, MissionRunActivity.class);
-                        intent.putExtra(MissionRunActivity.PARAM_BUTTON_ID, buttonID);
-                        startActivity(intent);
-                    }
-                }
-            });
-        } else {
-            ToastUtils.setResultToToast("Not ready!");
-        }
-    }
-
     private void prepareMission(String buttonID) {
         if (HelperUtils.isExistMission(buttonID) == false) {
             ToastUtils.setResultToToast("Mission is not ready !");
@@ -246,11 +226,14 @@ public class MainActivity extends AppCompatActivity implements MainListAdapter.L
             return;
         }
 
-        DJIError djiError = MissionControl.getInstance().getWaypointMissionOperator().loadMission(mission);
-        if (djiError != null)
-            showResultToast(djiError);
-        else
-            uploadMission(buttonID);
+//        DJIError djiError = MissionControl.getInstance().getWaypointMissionOperator().loadMission(mission);
+//        if (djiError != null)
+//            showResultToast(djiError);
+//        else {
+            Intent intent = new Intent(MainActivity.this, MissionRunActivity.class);
+            intent.putExtra(MissionRunActivity.PARAM_BUTTON_ID, buttonID);
+            startActivity(intent);
+//        }
     }
 
 

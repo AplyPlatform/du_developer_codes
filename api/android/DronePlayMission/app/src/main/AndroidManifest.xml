@@ -5,7 +5,7 @@
     <!--
          The ACCESS_COARSE/FINE_LOCATION permissions are not required to use
          Google Maps Android API v2, but you must specify either coarse or fine
-         location permissions for the 'MyLocation' functionality. 
+         location permissions for the 'MyLocation' functionality.
     -->
     <uses-permission android:name="android.permission.BLUETOOTH" />
     <uses-permission android:name="android.permission.BLUETOOTH_ADMIN" />
@@ -41,23 +41,39 @@
         android:theme="@style/AppTheme">
         <meta-data
             android:name="com.google.android.geo.API_KEY"
-            android:value="GOOGLE-MAP-API-KEY" />
+            android:value="<GOOGLE-API-KEY>" />
         <meta-data
             android:name="com.dji.sdk.API_KEY"
-            android:value="DJI-SDK-API-KEY" />
+            android:value="<DJI-SDK-API-KEY>" />
         <meta-data
             android:name="io.droneplay.token"
-            android:value="DRONEPLAY-API-TOKEN" />
+            android:value="<DRONEPLAY-API-TOKEN>" />
         <meta-data
             android:name="io.droneplay.email"
-            android:value="DRONEPLAY-API-TOKEN-EMAIL" />
+            android:value="<DRONEPLAY-API-EMAIL>" />
 
         <activity
-            android:name=".MapsActivity"
+            android:name=".Activity.MapsActivity"
             android:configChanges="orientation|keyboardHidden|screenSize"
             android:label="@string/title_activity_maps"
             android:launchMode="singleTop"
             android:screenOrientation="portrait">
+        </activity>
+        <activity
+            android:configChanges="orientation|keyboardHidden|screenSize"
+            android:name=".Activity.MissionRunActivity"
+            android:launchMode="singleTop"
+            android:screenOrientation="landscape">
+        </activity>
+        <activity
+            android:theme="@style/Theme.AppCompat.Light"
+            android:name=".Activity.MainActivity"
+            android:launchMode="singleTop"
+            android:screenOrientation="portrait">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
             <intent-filter>
                 <action android:name="android.hardware.usb.action.USB_ACCESSORY_ATTACHED" />
             </intent-filter>
@@ -65,17 +81,6 @@
             <meta-data
                 android:name="android.hardware.usb.action.USB_ACCESSORY_ATTACHED"
                 android:resource="@xml/accessory_filter" />
-        </activity>
-        <activity
-            android:theme="@style/Theme.AppCompat.Light"
-            android:name=".MainActivity"
-            android:launchMode="singleTop"
-            android:screenOrientation="portrait">
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-
-                <category android:name="android.intent.category.LAUNCHER" />
-            </intent-filter>
         </activity>
     </application>
 

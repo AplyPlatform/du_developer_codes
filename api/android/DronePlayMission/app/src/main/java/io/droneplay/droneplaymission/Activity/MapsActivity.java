@@ -1,4 +1,4 @@
-package io.droneplay.droneplaymission;
+package io.droneplay.droneplaymission.Activity;
 
 import android.content.Context;
 import android.content.Intent;
@@ -20,8 +20,15 @@ import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
 
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+
+import dji.common.mission.waypoint.Waypoint;
+import dji.common.mission.waypoint.WaypointMission;
+import io.droneplay.droneplaymission.HelperUtils;
+import io.droneplay.droneplaymission.R;
+import io.droneplay.droneplaymission.WaypointManager;
 
 
 public class MapsActivity extends FragmentActivity implements OnMapReadyCallback, HelperUtils.markerDataInputClickListener {
@@ -89,29 +96,45 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         return null;
     }
 
-    /**
-     * Manipulates the map once available.
-     * This callback is triggered when the map is ready to be used.
-     * This is where we can add markers or lines, add listeners or move the camera. In this case,
-     * we just add a marker near Sydney, Australia.
-     * If Google Play services is not installed on the device, the user will be prompted to install
-     * it inside the SupportMapFragment. This method will only be triggered once the user has
-     * installed Google Play services and returned to the app.
-     */
+    private LatLng loadMissionsToMap() {
+        LatLng dockdo = null;
+        WaypointMission mission = manager.getWaypointMission();
+        List<Waypoint> mList = mission.getWaypointList();
+
+        if (mList != null && mList.size() > 0) {
+            mMap.clear();
+            mMarkers.clear();
+            textView.setText("");
+
+            for(Waypoint pt : mList) {
+                LatLng ltlng = new LatLng(pt.coordinate.getLatitude(), pt.coordinate.getLongitude());
+                addMarkerToMap(ltlng);
+                dockdo = ltlng;
+            }
+
+        }
+        else {
+            Location lc = getCurrentLocation();
+            if (lc != null) {
+                dockdo = new LatLng(lc.getLatitude(), lc.getLongitude());
+            }
+
+            if(dockdo == null){
+                dockdo = new LatLng(37.2412061, 131.8617358);
+            }
+        }
+
+        return dockdo;
+    }
+
+
     @Override
     public void onMapReady(GoogleMap googleMap) {
         mMap = googleMap;
 
-        LatLng dockdo = null;
 
-        Location lc = getCurrentLocation();
-        if (lc != null) {
-            dockdo = new LatLng(lc.getLatitude(), lc.getLongitude());
-        }
+        LatLng dockdo = loadMissionsToMap();
 
-        if(dockdo == null){
-            dockdo = new LatLng(37.2412061, 131.8617358);
-        }
 
         //mMap.addMarker(new MarkerOptions().position(dockdo).title("Marker in Dokdo"));
         mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(dockdo, 20));
@@ -129,7 +152,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         saveButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                manager.saveMissionToFile(buttonID);
+                manager.saveMissionToFile(mContext, buttonID);
             }
         });
 
@@ -153,7 +176,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                     String showText = String.format("Count: %d", mMarkers.size());
                     textView.setText(showText);
                 } else {
-                    MapsActivity.this.doubleBackToExitPressedOnce = true;
+                    doubleBackToExitPressedOnce = true;
                     new Handler().postDelayed(new Runnable() {
 
                         @Override
@@ -168,8 +191,6 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
 
         });
-
-
     }
 
 
@@ -179,21 +200,26 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
     @Override
     public void onMarkerDataInputClick(int altitude, LatLng latLng) {
-        String markerName = markerid + "";
-        final MarkerOptions nMarker = new MarkerOptions().position(latLng)
-                .title(markerName)
-                .snippet(markerName);
-        mMarkers.put(markerName, nMarker);
-        mMap.addMarker(nMarker);
-
+        String markerName = addMarkerToMap(latLng);
         String showText = String.format("Count: %d\nLat: %.4f, Lng: %.4f", mMarkers.size(), latLng.latitude, latLng.longitude);
         textView.setText(showText);
         manager.addAction(markerName,latLng.latitude,latLng.longitude, altitude, 0);
-        markerid++;
     }
 
     @Override
     protected void onDestroy() {
         super.onDestroy();
+    }
+
+    private String addMarkerToMap(LatLng latLng) {
+        String markerName = markerid + "";
+        MarkerOptions nMarker = new MarkerOptions().position(latLng)
+                .title(markerName)
+                .snippet(markerName);
+        mMarkers.put(markerName, nMarker);
+        mMap.addMarker(nMarker);
+        markerid++;
+
+        return markerName;
     }
 }
