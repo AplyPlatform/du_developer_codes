@@ -4,6 +4,7 @@ import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.graphics.Bitmap;
 import android.graphics.Matrix;
 import android.graphics.SurfaceTexture;
 import android.location.Location;
@@ -25,9 +26,12 @@ import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.OnMapReadyCallback;
 import com.google.android.gms.maps.SupportMapFragment;
+import com.google.android.gms.maps.model.BitmapDescriptorFactory;
+import com.google.android.gms.maps.model.CameraPosition;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.MarkerOptions;
 
+import java.util.List;
 import java.util.Map;
 import java.util.Timer;
 import java.util.TimerTask;
@@ -38,6 +42,8 @@ import dji.common.camera.SettingsDefinitions;
 import dji.common.camera.SystemState;
 import dji.common.error.DJIError;
 import dji.common.flightcontroller.FlightControllerState;
+import dji.common.mission.waypoint.Waypoint;
+import dji.common.mission.waypoint.WaypointMission;
 import dji.common.mission.waypoint.WaypointMissionDownloadEvent;
 import dji.common.mission.waypoint.WaypointMissionExecutionEvent;
 import dji.common.mission.waypoint.WaypointMissionState;
@@ -99,9 +105,14 @@ public class MissionRunActivity extends FragmentActivity implements OnMapReadyCa
     private WaypointManager manager;
     private DJICodecManager mCodecManager = null;
 
-    protected double currentLatitude = 181;
-    protected double currentLongitude = 181;
+    protected double currentLatitude = 0;
+    protected double currentLongitude = 0;
     protected float currentAltitude = 0.0f;
+
+    protected double oldLatitude = 0;
+    protected double oldLongitude = 0;
+    protected float oldAltitude = 0.0f;
+
     protected TextureView mVideoSurface = null;
 
     private Button mCaptureBtn, mShootPhotoModeBtn, mRecordVideoModeBtn;
@@ -153,6 +164,7 @@ public class MissionRunActivity extends FragmentActivity implements OnMapReadyCa
             });
         } else {
             ToastUtils.setResultToToast("Not ready!");
+            finish();
         }
     }
 
@@ -285,11 +297,11 @@ public class MissionRunActivity extends FragmentActivity implements OnMapReadyCa
 
     @Override
     public void onSurfaceTextureUpdated(SurfaceTexture surface) {
-        if (videoHeight != mCodecManager.getVideoHeight() || videoWidth != mCodecManager.getVideoWidth()) {
-            videoWidth = mCodecManager.getVideoWidth();
-            videoHeight = mCodecManager.getVideoHeight();
-            adjustAspectRatio(videoWidth, videoHeight);
-        }
+//        if (videoHeight != mCodecManager.getVideoHeight() || videoWidth != mCodecManager.getVideoWidth()) {
+//            videoWidth = mCodecManager.getVideoWidth();
+//            videoHeight = mCodecManager.getVideoHeight();
+//            adjustAspectRatio(videoWidth, videoHeight);
+//        }
     }
 
     /**
@@ -339,15 +351,47 @@ public class MissionRunActivity extends FragmentActivity implements OnMapReadyCa
         VideoFeeder.getInstance().getPrimaryVideoFeed().setCallback(null);
     }
 
-    private void updateWaypointMissionState() {
-        dapi.sendMyPosition(currentLatitude, currentLongitude, currentAltitude);
+    private String addMarkerToMap(LatLng latLng, int id) {
         String markerName = mMarkers.size() + ":" + Math.round(currentLatitude) + "," + Math.round(currentLongitude);
-        final MarkerOptions nMarker = new MarkerOptions().position(new LatLng(currentLatitude, currentLongitude))
+        MarkerOptions nMarker = new MarkerOptions().position(latLng)
                 .title(markerName)
                 .snippet(markerName);
-        if(mMap != null)
+
+        if (id >= 0) {
+            nMarker.icon(BitmapDescriptorFactory.fromResource(id));
+        }
+
+        mMarkers.put(markerName, nMarker);
+        if(mMap != null) {
             mMap.addMarker(nMarker);
-        textView.setText(markerName);
+        }
+
+        return markerName;
+    }
+
+    private void updateWaypointMissionState() {
+
+        if (Double.isNaN(currentLatitude)
+                || Double.isNaN(currentLongitude)
+                || Float.isNaN(currentAltitude)) return;
+
+        if (currentAltitude == oldAltitude
+                && currentLatitude == oldLatitude
+                && currentLongitude == oldLongitude) return;
+
+        runOnUiThread(new Runnable(){
+            @Override
+            public void run() {
+                dapi.sendMyPosition(currentLatitude, currentLongitude, currentAltitude);
+                LatLng latlng = new LatLng(currentLatitude, currentLongitude);
+                String markerName = addMarkerToMap(latlng, R.mipmap.drone);
+                textView.setText(markerName);
+
+                oldAltitude = currentAltitude;
+                oldLatitude = currentLatitude;
+                oldLongitude = currentLongitude;
+            }
+        });
     }
 
 
@@ -455,6 +499,47 @@ public class MissionRunActivity extends FragmentActivity implements OnMapReadyCa
         waypointMissionOperator.addListener(listener);
     }
 
+    private LatLng loadMissionsToMap() {
+        LatLng dockdo = null;
+        WaypointMission mission = manager.getWaypointMission();
+
+        if (mission == null)
+            return loadDefaultPosition();
+
+        List<Waypoint> mList = mission.getWaypointList();
+        if (mList == null || mList.size() == 0)
+            return loadDefaultPosition();
+
+        if (mMap != null)
+            mMap.clear();
+
+        mMarkers.clear();
+        textView.setText("");
+
+        for (Waypoint pt : mList) {
+            LatLng ltlng = new LatLng(pt.coordinate.getLatitude(), pt.coordinate.getLongitude());
+            addMarkerToMap(ltlng, -1);
+            dockdo = ltlng;
+        }
+
+        return dockdo;
+    }
+
+    private LatLng loadDefaultPosition() {
+        LatLng dockdo = null;
+
+        Location lc = getCurrentLocation();
+        if (lc != null) {
+            dockdo = new LatLng(lc.getLatitude(), lc.getLongitude());
+        }
+
+        if(dockdo == null){
+            dockdo = new LatLng(37.2412061, 131.8617358);
+        }
+
+        return dockdo;
+    }
+
     @Override
     public void onResume() {
         super.onResume();  // Always call the superclass method first
@@ -463,9 +548,10 @@ public class MissionRunActivity extends FragmentActivity implements OnMapReadyCa
         buttonID = i.getStringExtra(PARAM_BUTTON_ID);
         manager.setMission(buttonID);
 
+
         setUpListener();
         initPreviewer();
-        startMission();
+        //startMission();
     }
 
     private void tearDownListener() {
@@ -533,19 +619,8 @@ public class MissionRunActivity extends FragmentActivity implements OnMapReadyCa
     public void onMapReady(GoogleMap googleMap) {
         mMap = googleMap;
 
-        LatLng dockdo = null;
-
-        Location lc = getCurrentLocation();
-        if (lc != null) {
-            dockdo = new LatLng(lc.getLatitude(), lc.getLongitude());
-        }
-
-        if(dockdo == null){
-            dockdo = new LatLng(37.2412061, 131.8617358);
-        }
-
-        //mMap.addMarker(new MarkerOptions().position(dockdo).title("Marker in Dokdo"));
-        mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(dockdo, 20));
+        LatLng latLng = loadMissionsToMap();
+        mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(latLng, 20));
 
         testButton.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -559,7 +634,6 @@ public class MissionRunActivity extends FragmentActivity implements OnMapReadyCa
                 }
             }
         });
-
     }
 
 

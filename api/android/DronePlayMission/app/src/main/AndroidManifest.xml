@@ -41,16 +41,16 @@
         android:theme="@style/AppTheme">
         <meta-data
             android:name="com.google.android.geo.API_KEY"
-            android:value="<GOOGLE-API-KEY>" />
+            android:value="<GOOGLE_MAPAPI_KEY>" />
         <meta-data
             android:name="com.dji.sdk.API_KEY"
-            android:value="<DJI-SDK-API-KEY>" />
+            android:value="<DJI_SDK_KEY>" />
         <meta-data
             android:name="io.droneplay.token"
-            android:value="<DRONEPLAY-API-TOKEN>" />
+            android:value="<DRONEPLAY_API_TOKEN>" />
         <meta-data
             android:name="io.droneplay.email"
-            android:value="<DRONEPLAY-API-EMAIL>" />
+            android:value="<DRONEPLAY_API_EMAIL>" />
 
         <activity
             android:name=".Activity.MapsActivity"

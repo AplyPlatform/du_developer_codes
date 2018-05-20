@@ -2,7 +2,6 @@ package io.droneplay.droneplaymission;
 
 import android.support.annotation.Nullable;
 
-import com.dji.sdk.sample.internal.controller.DJISampleApplication;
 
 import dji.sdk.flightcontroller.FlightController;
 import dji.sdk.flightcontroller.Simulator;

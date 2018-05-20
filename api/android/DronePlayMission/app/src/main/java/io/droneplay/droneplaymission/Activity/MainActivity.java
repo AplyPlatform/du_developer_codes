@@ -7,6 +7,7 @@ import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.os.AsyncTask;
 import android.os.Build;
+import android.os.Handler;
 import android.support.annotation.NonNull;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.ContextCompat;
@@ -86,8 +87,7 @@ public class MainActivity extends AppCompatActivity implements MainListAdapter.L
         listview = (ListView) findViewById(R.id.listviewMain);
         listview.setAdapter(adapter);
         newMissionBtn = findViewById(R.id.btnNewMission);
-
-        checkAndRequestPermissions();
+        listview.setVisibility(View.INVISIBLE);
     }
 
     /**
@@ -109,13 +109,21 @@ public class MainActivity extends AppCompatActivity implements MainListAdapter.L
         // If there is enough permission, we will start the registration
         if (missingPermission.isEmpty()) {
             startSDKRegistration();
-            Init();
         } else {
             Toast.makeText(getApplicationContext(), "Missing permissions!!!", Toast.LENGTH_LONG).show();
         }
     }
 
 
+    @Override
+    public void onResume() {
+        super.onResume();  // Always call the superclass method first
+
+        newMissionBtn.setText("Wait ...");
+        newMissionBtn.setEnabled(false);
+        listview.setVisibility(View.INVISIBLE);
+        checkAndRequestPermissions();
+    }
 
     //region Registration n' Permissions Helpers
 
@@ -133,16 +141,11 @@ public class MainActivity extends AppCompatActivity implements MainListAdapter.L
         // Request for missing permissions
         if (missingPermission.isEmpty()) {
             startSDKRegistration();
-            Init();
         } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
             ActivityCompat.requestPermissions(this,
                     missingPermission.toArray(new String[missingPermission.size()]),
                     REQUEST_PERMISSION_CODE);
         }
-        else {
-            Init();
-        }
-
     }
 
     private void startSDKRegistration() {
@@ -150,16 +153,17 @@ public class MainActivity extends AppCompatActivity implements MainListAdapter.L
             AsyncTask.execute(new Runnable() {
                 @Override
                 public void run() {
-                    ToastUtils.setResultToToast(MainActivity.this.getString(R.string.sdk_registration_doing_message));
+                    ToastUtils.setResultToToast("Now on ready, wait please.");
                     DJISDKManager.getInstance().registerApp(MainActivity.this.getApplicationContext(), new DJISDKManager.SDKManagerCallback() {
                         @Override
                         public void onRegister(DJIError djiError) {
                             if (djiError == DJISDKError.REGISTRATION_SUCCESS) {
                                 DJILog.e("App registration", DJISDKError.REGISTRATION_SUCCESS.getDescription());
                                 DJISDKManager.getInstance().startConnectionToProduct();
-                                ToastUtils.setResultToToast(MainActivity.this.getString(R.string.sdk_registration_success_message));
+                                ToastUtils.setResultToToast("Now Ready for launch !");
+                                Init();
                             } else {
-                                ToastUtils.setResultToToast(MainActivity.this.getString(R.string.sdk_registration_message));
+                                ToastUtils.setResultToToast("Initialize failed.");
                             }
                             //Log.v(TAG, djiError.getDescription());
                         }
@@ -172,6 +176,9 @@ public class MainActivity extends AppCompatActivity implements MainListAdapter.L
                     });
                 }
             });
+        }
+        else {
+            Init();
         }
     }
 
@@ -210,6 +217,16 @@ public class MainActivity extends AppCompatActivity implements MainListAdapter.L
         if (list == null) return;
 
         adapter.setItems(list);
+
+        runOnUiThread(new Runnable(){
+            @Override
+            public void run() {
+                newMissionBtn.setText("+");
+                newMissionBtn.setEnabled(true);
+                listview.setVisibility(View.VISIBLE);
+                adapter.notifyDataSetChanged();
+            }
+        });
     }
 
     private void prepareMission(String buttonID) {

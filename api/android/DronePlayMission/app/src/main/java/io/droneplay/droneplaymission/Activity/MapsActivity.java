@@ -16,6 +16,7 @@ import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.OnMapReadyCallback;
 import com.google.android.gms.maps.SupportMapFragment;
+import com.google.android.gms.maps.model.CameraPosition;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
@@ -96,32 +97,43 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         return null;
     }
 
+    private LatLng loadDefaultPosition() {
+        LatLng dockdo = null;
+
+        Location lc = getCurrentLocation();
+        if (lc != null) {
+            dockdo = new LatLng(lc.getLatitude(), lc.getLongitude());
+        }
+
+        if(dockdo == null){
+            dockdo = new LatLng(37.2412061, 131.8617358);
+        }
+
+        return dockdo;
+    }
+
     private LatLng loadMissionsToMap() {
         LatLng dockdo = null;
         WaypointMission mission = manager.getWaypointMission();
+
+        if (mission == null)
+            return loadDefaultPosition();
+
         List<Waypoint> mList = mission.getWaypointList();
+        if (mList == null || mList.size() == 0)
+            return loadDefaultPosition();
 
-        if (mList != null && mList.size() > 0) {
+        if (mMap != null)
             mMap.clear();
-            mMarkers.clear();
-            textView.setText("");
 
-            for(Waypoint pt : mList) {
-                LatLng ltlng = new LatLng(pt.coordinate.getLatitude(), pt.coordinate.getLongitude());
-                addMarkerToMap(ltlng);
-                dockdo = ltlng;
-            }
+        mMarkers.clear();
+        textView.setText("");
 
-        }
-        else {
-            Location lc = getCurrentLocation();
-            if (lc != null) {
-                dockdo = new LatLng(lc.getLatitude(), lc.getLongitude());
-            }
-
-            if(dockdo == null){
-                dockdo = new LatLng(37.2412061, 131.8617358);
-            }
+        for (Waypoint pt : mList) {
+            LatLng ltlng = new LatLng(pt.coordinate.getLatitude(), pt.coordinate.getLongitude());
+            addMarkerToMap(ltlng);
+            dockdo = ltlng;
+            markerid++;
         }
 
         return dockdo;
@@ -132,9 +144,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     public void onMapReady(GoogleMap googleMap) {
         mMap = googleMap;
 
-
         LatLng dockdo = loadMissionsToMap();
-
 
         //mMap.addMarker(new MarkerOptions().position(dockdo).title("Marker in Dokdo"));
         mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(dockdo, 20));
@@ -218,6 +228,8 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                 .snippet(markerName);
         mMarkers.put(markerName, nMarker);
         mMap.addMarker(nMarker);
+        CameraPosition pos = mMap.getCameraPosition();
+        mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(latLng, pos.zoom));
         markerid++;
 
         return markerName;
