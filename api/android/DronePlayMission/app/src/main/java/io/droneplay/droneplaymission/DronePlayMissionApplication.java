@@ -4,6 +4,7 @@ import android.app.Application;
 import android.content.Context;
 import android.support.multidex.MultiDex;
 
+import com.mapbox.mapboxsdk.Mapbox;
 import com.secneo.sdk.Helper;
 import com.squareup.otto.Bus;
 import com.squareup.otto.ThreadEnforcer;
@@ -83,5 +84,11 @@ public class DronePlayMissionApplication extends Application {
         app = this;
     }
 
+    @Override
+    public void onCreate() {
+        super.onCreate();
 
+        // Mapbox Access token
+        Mapbox.getInstance(getApplicationContext(), DronePlayAPI.getMetadata(app, "mapbox.sdk.ACCESSTOKEN"));
+    }
 }

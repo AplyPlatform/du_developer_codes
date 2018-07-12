@@ -10,7 +10,7 @@ import android.widget.Toast;
 /**
  * Created by DJI on 2/28/17.
  */
-
+@SuppressWarnings("unchecked")
 public class ToastUtils {
     private static final int MESSAGE_UPDATE = 1;
     private static final int MESSAGE_TOAST = 2;

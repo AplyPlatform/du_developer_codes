@@ -1,0 +1,135 @@
+<LinearLayout
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:background="#000"
+    xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <LinearLayout
+        android:orientation="horizontal"
+        android:layout_width="match_parent"
+        android:padding="5dp"
+        android:background="#000"
+        android:layout_height="wrap_content">
+
+        <Button
+            android:id="@+id/testButton"
+            android:layout_marginRight="10dp"
+            android:background="#337"
+            android:textColor="#fff"
+            android:textSize="15dp"
+            android:text="STOP"
+            android:layout_width="70dp"
+            android:layout_height="30dp" />
+
+        <TextView
+            android:id="@+id/mapMon"
+            android:background="#000"
+            android:textColor="#0f0"
+            android:layout_width="wrap_content"
+            android:layout_height="30dp"
+            android:textSize="15dp"
+            android:gravity="left"
+            android:text="adsfsd"/>
+
+        <TextView
+            android:id="@+id/timer"
+            android:textSize="15dp"
+            android:gravity="left"
+            android:layout_width="wrap_content"
+            android:layout_height="30dp"
+            android:background="#000"
+            android:textColor="#ffffff"
+            android:text="adsfsd" />
+
+    </LinearLayout>
+
+    <LinearLayout
+        android:weightSum="2"
+        android:orientation="horizontal"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent">
+
+        <LinearLayout
+            android:layout_alignParentLeft="true"
+            android:layout_weight="1"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent">
+            <fragment xmlns:android="http://schemas.android.com/apk/res/android"
+                android:id="@+id/map"
+                android:name="com.google.android.gms.maps.SupportMapFragment"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_alignParentRight="true"
+            android:background="#000"
+            android:layout_weight="1"
+            android:weightSum="5"
+            android:orientation="vertical"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent">
+                <TextureView
+                    android:id="@+id/video_previewer_surface"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:layout_gravity="center"
+                    android:layout_weight="4"
+                    android:layout_centerHorizontal="true"
+                    android:layout_above="@+id/linearLayout" />
+
+                <LinearLayout
+                    android:layout_weight="1"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:id="@+id/linearLayout">
+
+                    <Button
+                        android:id="@+id/btn_capture"
+                        android:text="Capture"
+                        android:layout_marginRight="10dp"
+                        android:background="#333"
+                        android:textColor="#fff"
+                        android:textSize="10dp"
+                        android:layout_width="70dp"
+                        android:layout_height="30dp" />
+
+                    <ToggleButton
+                        android:id="@+id/btn_record"
+                        android:layout_marginRight="10dp"
+                        android:background="#333"
+                        android:textColor="#fff"
+                        android:layout_width="70dp"
+                        android:layout_height="30dp"
+                        android:text="Rec."
+                        android:textOff="Rec."
+                        android:textOn="Stop Rec."
+                        android:textSize="10dp"
+                        android:checked="false" />
+
+                    <Button
+                        android:id="@+id/btn_shoot_photo_mode"
+                        android:text="Photo Mode"
+                        android:layout_marginRight="10dp"
+                        android:background="#333"
+                        android:textColor="#fff"
+                        android:textSize="10dp"
+                        android:layout_width="70dp"
+                        android:layout_height="30dp"
+                        />
+
+                    <Button
+                        android:id="@+id/btn_record_video_mode"
+                        android:text="Video Mode"
+                        android:background="#333"
+                        android:textColor="#fff"
+                        android:textSize="10dp"
+                        android:layout_width="70dp"
+                        android:layout_height="30dp" />
+                </LinearLayout>
+        </LinearLayout>
+    </LinearLayout>
+</LinearLayout>
+
