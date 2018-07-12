@@ -213,11 +213,6 @@ public class MainActivity extends AppCompatActivity implements MainListAdapter.L
             return;
         }
 
-        ArrayList<MainListItem> list = HelperUtils.loadButtonsFromFile();
-        if (list == null) return;
-
-        adapter.setItems(list);
-
         runOnUiThread(new Runnable(){
             @Override
             public void run() {
@@ -227,6 +222,11 @@ public class MainActivity extends AppCompatActivity implements MainListAdapter.L
                 adapter.notifyDataSetChanged();
             }
         });
+
+        ArrayList<MainListItem> list = HelperUtils.loadButtonsFromFile();
+        if (list == null) return;
+
+        adapter.setItems(list);
     }
 
     private void prepareMission(String buttonID) {
@@ -243,14 +243,14 @@ public class MainActivity extends AppCompatActivity implements MainListAdapter.L
             return;
         }
 
-//        DJIError djiError = MissionControl.getInstance().getWaypointMissionOperator().loadMission(mission);
-//        if (djiError != null)
-//            showResultToast(djiError);
-//        else {
+        DJIError djiError = MissionControl.getInstance().getWaypointMissionOperator().loadMission(mission);
+        if (djiError != null)
+            showResultToast(djiError);
+        else {
             Intent intent = new Intent(MainActivity.this, MissionRunActivity.class);
             intent.putExtra(MissionRunActivity.PARAM_BUTTON_ID, buttonID);
             startActivity(intent);
-//        }
+       }
     }
 
 

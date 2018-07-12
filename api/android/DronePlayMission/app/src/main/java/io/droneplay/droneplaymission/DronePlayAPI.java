@@ -26,8 +26,8 @@ public class DronePlayAPI {
     }
 
     public void sendMyPosition(double lat, double lng, float alt) {
-        String token = getMetadata("io.droneplay.token");
-        String email = getMetadata("io.droneplay.email");
+        String token = getMetadata(context,"io.droneplay.token");
+        String email = getMetadata(context,"io.droneplay.email");
 
         String url = String.format(murl, token, email, lat, lng, alt);
 
@@ -49,7 +49,7 @@ public class DronePlayAPI {
     }
     // code request code here
 
-    private String getMetadata(String name) {
+    public static String getMetadata(Context context, String name) {
         try {
             ApplicationInfo appInfo = context.getPackageManager().getApplicationInfo(
                     context.getPackageName(), PackageManager.GET_META_DATA);

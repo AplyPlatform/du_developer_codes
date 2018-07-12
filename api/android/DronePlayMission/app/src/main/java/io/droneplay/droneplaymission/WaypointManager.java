@@ -3,6 +3,8 @@ package io.droneplay.droneplaymission;
 import android.content.Context;
 import android.widget.Toast;
 
+import com.mapbox.mapboxsdk.style.layers.HeatmapLayer;
+
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;

@@ -2,18 +2,20 @@ package io.droneplay.droneplaymission;
 
 import android.content.Context;
 import android.content.DialogInterface;
+import android.content.SharedPreferences;
 import android.os.Build;
 import android.os.Environment;
+import android.preference.PreferenceManager;
 import android.support.v7.app.AlertDialog;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.widget.EditText;
 import android.widget.Toast;
 
-import com.google.android.gms.maps.model.LatLng;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.reflect.TypeToken;
+import com.mapbox.mapboxsdk.geometry.LatLng;
 
 
 import java.io.BufferedWriter;
@@ -31,10 +33,27 @@ import java.nio.charset.StandardCharsets;
 import java.security.SecureRandom;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Random;
 
 public class HelperUtils {
     final static String AB = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
+
+    private static final String MY_MAP_STYLE = "my_map_style";
+
+    public static void saveMapStyle(Context context, int mapStyle) {
+        SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(context);
+        String registerKey = MY_MAP_STYLE;
+
+        SharedPreferences.Editor editor = prefs.edit();
+        editor.putInt(registerKey, mapStyle);
+        editor.commit();
+    }
+
+    public static int readMapStyle(Context context) {
+        SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(context);
+        String registerKey = MY_MAP_STYLE;
+
+        return prefs.getInt(registerKey, 0);
+    }
 
     public static boolean isExistMission(String buttonid) {
         String path = Environment.getExternalStorageDirectory().getAbsolutePath()  + File.separator + "/DronePlay/AppData" + File.separator;

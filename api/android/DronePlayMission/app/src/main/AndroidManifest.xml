@@ -39,19 +39,18 @@
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/AppTheme">
-
         <meta-data
-            android:name="com.google.android.geo.API_KEY"
-            android:value="GOOGLE_MAPAPI_KEY" />
+            android:name="mapbox.sdk.ACCESSTOKEN"
+            android:value="MAPBOX-SDK-ACCESS-TOKEN" />
         <meta-data
             android:name="com.dji.sdk.API_KEY"
-            android:value="DJI_SDK_KEY" />
+            android:value="DJI-SDK-API-KEY" />
         <meta-data
             android:name="io.droneplay.token"
-            android:value="DRONEPLAY_API_TOKEN" />
+            android:value="DRONEPLAY-API-TOKEN" />
         <meta-data
             android:name="io.droneplay.email"
-            android:value="DRONEPLAY_API_EMAIL" />
+            android:value="DRONEPLAY-API-EMAIL" />
 
         <activity
             android:name=".Activity.MapsActivity"
@@ -61,10 +60,18 @@
             android:screenOrientation="portrait">
         </activity>
         <activity
+            android:theme="@android:style/Theme.Holo.NoActionBar.Fullscreen"
             android:configChanges="orientation|keyboardHidden|screenSize"
             android:name=".Activity.MissionRunActivity"
             android:launchMode="singleTop"
-            android:screenOrientation="landscape">
+            android:screenOrientation="sensorLandscape">
+        </activity>
+        <activity
+            android:theme="@android:style/Theme.Holo.NoActionBar.Fullscreen"
+            android:configChanges="orientation|keyboardHidden|screenSize"
+            android:name=".Activity.MissionRunBigMapActivity"
+            android:launchMode="singleTop"
+            android:screenOrientation="sensorLandscape">
         </activity>
         <activity
             android:theme="@style/Theme.AppCompat.Light"
