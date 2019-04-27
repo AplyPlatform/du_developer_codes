@@ -140,6 +140,8 @@ public class MissionRunActivity extends FragmentActivity implements DJICodecMana
 
     private boolean bIsRecording = false;
 
+    private DataTimer recordTask = null;
+
     private final Map<String, MarkerOptions> mMarkers = new ConcurrentHashMap<String, MarkerOptions>();
     private final ArrayList<FlightRecordItem> mFlightRecord = new ArrayList<>();
 
@@ -487,37 +489,34 @@ public class MissionRunActivity extends FragmentActivity implements DJICodecMana
     }
 
     private void startDataScheduler() {
-        dataTimer.schedule(new DataTimer(), 2000, 2000);
+        if (recordTask != null) return;
+
+        recordTask = new DataTimer();
+        dataTimer.schedule(recordTask, 0, 2000);
     }
 
     private void stopDataScheduler() {
         dataTimer.cancel();
+        recordTask = null;
     }
 
 
     private void sendDataToServer(int currentAction) {
 
         FlightRecordItem item = new FlightRecordItem();
-        item.act = String.valueOf(currentAction);
-        item.alt = String.valueOf(currentAltitude);
+        item.act = currentAction;
+        item.actparam = 0;
+        item.speed = 5;
+        item.alt = currentAltitude;
         item.lat = String.valueOf(currentLatitude);
         item.lng = String.valueOf(currentLongitude);
-        //item.actParam = String.valueOf()
         item.etc.battery = String.valueOf(latestBatteryState.getChargeRemainingInPercent());
         item.etc.marked = bPositionTouched ? "true" : "false";
         item.dsec = String.valueOf(timeCounter);
         item.dtimestamp = HelperUtils.getInstance().getTimeStamp();
         mFlightRecord.add(item);
 
-        HelperUtils.getInstance().sendMyPosition(item);
-
-
         final LatLng latlng = new LatLng(currentLatitude, currentLongitude);
-
-        if (bPositionTouched == true) {
-            bPositionTouched = false;
-            ToastUtils.setResultToToast("Position is marked.");
-        }
 
         runOnUiThread(new Runnable(){
             @Override
@@ -525,13 +524,20 @@ public class MissionRunActivity extends FragmentActivity implements DJICodecMana
                 if (currentDroneMarker != null)
                     mMap.removeMarker(currentDroneMarker);
 
-                currentDroneMarker = addMarkerToMap(latlng, R.mipmap.drone);
+                HelperUtils.getInstance().sendMyPosition(item);
 
-                oldAltitude = currentAltitude;
-                oldLatitude = currentLatitude;
-                oldLongitude = currentLongitude;
+                currentDroneMarker = addMarkerToMap(latlng, R.mipmap.drone);
             }
         });
+
+        oldAltitude = currentAltitude;
+        oldLatitude = currentLatitude;
+        oldLongitude = currentLongitude;
+
+        if (bPositionTouched == true) {
+            bPositionTouched = false;
+            ToastUtils.setResultToToast("Position is marked.");
+        }
     }
 
 
@@ -656,6 +662,10 @@ public class MissionRunActivity extends FragmentActivity implements DJICodecMana
             public void onExecutionStart() {
                 mFlightRecord.clear();
                 ToastUtils.setResultToToast("Execution started!");
+
+                startDataScheduler();
+                startRecord();
+
                 updateWaypointMissionState();
                 runOnUiThread(new Runnable(){
                     @Override
@@ -702,7 +712,7 @@ public class MissionRunActivity extends FragmentActivity implements DJICodecMana
                         JSONObject json = new JSONObject(resultContent);
                         String result = json.getString("result");
                         if (result != null && result.equalsIgnoreCase("success")) {
-
+                            mFlightRecord.clear();
                         }
 
                     } catch (JSONException e) {
@@ -883,8 +893,7 @@ public class MissionRunActivity extends FragmentActivity implements DJICodecMana
             @Override
             public void onResult(DJIError djiError) {
                 if (djiError == null) {
-                    startDataScheduler();
-                    startRecord();
+
                 }
                 else {
                     showResultToast(djiError);

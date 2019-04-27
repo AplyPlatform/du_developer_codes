@@ -5,9 +5,13 @@ public class FlightRecordItem {
     public String dsec;
     public String lat;
     public String lng;
-    public String alt;
-    public String act;
-    public String speed;
-    public String actParam;
+    public float alt;
+    public int act;
+    public int speed;
+    public int actparam;
     public long dtimestamp;
+
+    public FlightRecordItem() {
+        this.etc = new EtcItem();
+    }
 }

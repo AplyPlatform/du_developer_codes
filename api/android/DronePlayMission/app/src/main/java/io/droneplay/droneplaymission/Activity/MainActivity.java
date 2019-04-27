@@ -146,7 +146,7 @@ public class MainActivity extends AppCompatActivity implements MainListAdapter.L
             @Override
             public void onClick(View view) {
                 BaseProduct mProduct = DronePlayMissionApplication.getProductInstance();
-                if (mProduct != null || mProduct.isConnected() == false) {
+                if (mProduct == null || mProduct.isConnected() == false) {
                     showToast("Product is not connected !");
                     return;
                 }
@@ -222,7 +222,7 @@ public class MainActivity extends AppCompatActivity implements MainListAdapter.L
 
     private void prepareMission(String buttonID) {
         BaseProduct mProduct = DronePlayMissionApplication.getProductInstance();
-        if (mProduct != null || mProduct.isConnected() == false) {
+        if (mProduct == null || mProduct.isConnected() == false) {
             //if (DJISDKManager.getInstance().startConnectionToProduct() == false) {
                 showToast("Failed to connect to product");
                 return;
