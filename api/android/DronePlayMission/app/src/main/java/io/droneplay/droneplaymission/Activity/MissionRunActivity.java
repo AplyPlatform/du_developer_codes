@@ -80,11 +80,10 @@ import io.droneplay.droneplaymission.utils.ToastUtils;
 import io.droneplay.droneplaymission.utils.WaypointManager;
 
 
-public class MissionRunActivity extends FragmentActivity implements DJICodecManager.YuvDataCallback, HelperUtils.titleInputClickListener{
+public class MissionRunActivity extends FragmentActivity {
     private static final String TAG = MissionRunActivity.class.getSimpleName();
     public static final String PARAM_BUTTON_ID = "buttonID";
     private Marker currentDroneMarker;
-    private String currentMissionName;
 
     private Button stopButton;
 
@@ -112,7 +111,7 @@ public class MissionRunActivity extends FragmentActivity implements DJICodecMana
 
     private WaypointMissionOperator waypointMissionOperator = null;
     private WaypointMissionOperatorListener listener;
-    private WaypointManager manager;
+    private WaypointManager manager = null;
     private DJICodecManager mCodecManager = null;
 
     private BatteryState latestBatteryState;
@@ -157,9 +156,6 @@ public class MissionRunActivity extends FragmentActivity implements DJICodecMana
 
         mMapView = (MapView) findViewById(R.id.map);
         mMapView.onCreate(savedInstanceState);
-
-        manager = WaypointManager.getInstance();
-        waypointMissionOperator = MissionControl.getInstance().getWaypointMissionOperator();
 
         initUI();
 
@@ -260,7 +256,8 @@ public class MissionRunActivity extends FragmentActivity implements DJICodecMana
                 setMapStyle();
 
                 LatLng latLng = loadMissionsToMap();
-                mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(latLng, 20));
+                if (latLng != null)
+                    mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(latLng, 20));
 
                 stopButton.setOnClickListener(new View.OnClickListener() {
                     @Override
@@ -276,7 +273,7 @@ public class MissionRunActivity extends FragmentActivity implements DJICodecMana
                         stopDataScheduler();
                         stopRecord();
                         tearDownListener();
-                        HelperUtils.getInstance().uploadFlightRecord(currentMissionName, mFlightRecord, uploadHandler);
+                        HelperUtils.getInstance().uploadFlightRecord(buttonID, mFlightRecord, uploadHandler);
                     }
                 });
             }
@@ -469,16 +466,6 @@ public class MissionRunActivity extends FragmentActivity implements DJICodecMana
         });
     }
 
-    @Override
-    public void onTitileInputClick(String buttonTitle) {
-        if (buttonTitle == null || buttonTitle.equalsIgnoreCase("")) {
-            finish();
-            return;
-        }
-
-        currentMissionName = buttonTitle;
-        startNewMission();
-    }
 
     // 첫 번째 TimerTask 를 이용한 방법
     class DataTimer extends TimerTask{
@@ -553,6 +540,10 @@ public class MissionRunActivity extends FragmentActivity implements DJICodecMana
 
             if (ModuleVerificationUtil.isRemoteControllerAvailable()) {
                 remoteController = ((Aircraft) product).getRemoteController();
+                if (remoteController == null) {
+                    ToastUtils.setResultToToast("Remotecontroller is not connected");
+                    return;
+                }
 
                 remoteController.setHardwareStateCallback(new HardwareState.HardwareStateCallback() {
                     @Override
@@ -616,7 +607,12 @@ public class MissionRunActivity extends FragmentActivity implements DJICodecMana
                 handler = new Handler();
             }
         }
+    }
 
+    private void setUpWaypointListener() {
+
+        manager = WaypointManager.getInstance();
+        waypointMissionOperator = MissionControl.getInstance().getWaypointMissionOperator();
 
         // Example of Listener
         listener = new WaypointMissionOperatorListener() {
@@ -740,6 +736,8 @@ public class MissionRunActivity extends FragmentActivity implements DJICodecMana
 
 
     private LatLng loadMissionsToMap() {
+        if (manager == null) return null;
+
         LatLng dockdo = null;
         WaypointMission mission = manager.getWaypointMission();
 
@@ -782,10 +780,22 @@ public class MissionRunActivity extends FragmentActivity implements DJICodecMana
 
 
     private void startNewMission() {
+
         setUpListener();
         initPreviewer();
         startDataScheduler();
         startRecord();
+
+        runOnUiThread(new Runnable(){
+            @Override
+            public void run() {
+                if(mMap != null)
+                    mMap.clear();
+
+                mMapView.setClickable(false);
+                stopButton.setEnabled(true);
+            }
+        });
     }
 
 
@@ -795,12 +805,14 @@ public class MissionRunActivity extends FragmentActivity implements DJICodecMana
         super.onResume();  // Always call the superclass method first
 
         Intent i = getIntent();
-        buttonID = i.getStringExtra(PARAM_BUTTON_ID);
-        if (buttonID != null && buttonID.equalsIgnoreCase("NEW_MISSION")) {
-            HelperUtils.getInstance().showTitleInputDialog(this, this);
+        String param = i.getStringExtra(PARAM_BUTTON_ID);
+        if (param != null && param.equalsIgnoreCase("NEW_MISSION")) {
+            buttonID = i.getStringExtra("title");
+            startNewMission();
         }
         else {
             setUpListener();
+            setUpWaypointListener();
             initPreviewer();
             loadMission();
         }
@@ -830,6 +842,8 @@ public class MissionRunActivity extends FragmentActivity implements DJICodecMana
 
 
     private void uploadMission() {
+        if (waypointMissionOperator == null) return;
+
         if (WaypointMissionState.READY_TO_RETRY_UPLOAD.equals(waypointMissionOperator.getCurrentState())
                 || WaypointMissionState.READY_TO_UPLOAD.equals(waypointMissionOperator.getCurrentState())) {
             waypointMissionOperator.uploadMission(new CommonCallbacks.CompletionCallback() {
@@ -871,6 +885,8 @@ public class MissionRunActivity extends FragmentActivity implements DJICodecMana
     }
 
     private void loadMission() {
+        if (waypointMissionOperator == null) return;
+
         WaypointManager.getInstance().setMission(buttonID);
         WaypointMission mission = WaypointManager.getInstance().getWaypointMission();
         DJIError djiError = waypointMissionOperator.loadMission(mission);
@@ -884,6 +900,7 @@ public class MissionRunActivity extends FragmentActivity implements DJICodecMana
     }
 
     private void startMission() {
+        if (waypointMissionOperator == null) return;
 //        if (waypointMissionOperator.getCurrentState() != WaypointMissionState.READY_TO_EXECUTE) {
 //            ToastUtils.setResultToToast("Not ready to execute ! Why ??");
 //            return;
@@ -903,6 +920,7 @@ public class MissionRunActivity extends FragmentActivity implements DJICodecMana
     }
 
     private void stopMission() {
+        if (waypointMissionOperator == null) return;
         // Example of stopping a Mission
         waypointMissionOperator.stopMission(new CommonCallbacks.CompletionCallback() {
             @Override
@@ -920,6 +938,7 @@ public class MissionRunActivity extends FragmentActivity implements DJICodecMana
     }
 
     private void tearDownListener() {
+
         if (waypointMissionOperator != null && listener != null) {
             // Example of removing listeners
             waypointMissionOperator.removeListener(listener);
@@ -968,42 +987,5 @@ public class MissionRunActivity extends FragmentActivity implements DJICodecMana
                 }
             });
         }
-    }
-
-        // Method for taking photo
-    private void captureAction() {
-        if (!ModuleVerificationUtil.isCameraModuleAvailable()) return;
-
-        final Camera camera = DronePlayMissionApplication.getProductInstance().getCamera();
-        if (camera != null) {
-            SettingsDefinitions.ShootPhotoMode photoMode = SettingsDefinitions.ShootPhotoMode.SINGLE; // Set the camera capture mode as Single mode
-            camera.setShootPhotoMode(photoMode, new CommonCallbacks.CompletionCallback(){
-                @Override
-                public void onResult(DJIError djiError) {
-                    if (handler != null && null == djiError) {
-                        handler.postDelayed(new Runnable() {
-                            @Override
-                            public void run() {
-                                camera.startShootPhoto(new CommonCallbacks.CompletionCallback() {
-                                    @Override
-                                    public void onResult(DJIError djiError) {
-                                        if (djiError == null) {
-
-                                        } else {
-                                            ToastUtils.setResultToToast(djiError.getDescription());
-                                        }
-                                    }
-                                });
-                            }
-                        }, 2000);
-                    }
-                }
-            });
-        }
-    }
-
-    @Override
-    public void onYuvDataReceived(ByteBuffer byteBuffer, int dataSize, final int width, final int height) {
-
     }
 }

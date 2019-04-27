@@ -151,14 +151,14 @@ public class MainActivity extends AppCompatActivity implements MainListAdapter.L
                     return;
                 }
 
-                Intent intent = new Intent(MainActivity.this, MissionRunActivity.class);
-                intent.putExtra(MissionRunActivity.PARAM_BUTTON_ID, "NEW_MISSION");
-                startActivity(intent);
+                HelperUtils.getInstance().showTitleInputDialog(MainActivity.this, MainActivity.this);
             }
         });
 
         HelperUtils.getInstance().loadButtonsFromServer(requestListHandler);
     }
+
+
 
     @SuppressLint("HandlerLeak")
     private final Handler requestListHandler = new Handler() {
@@ -309,9 +309,15 @@ public class MainActivity extends AppCompatActivity implements MainListAdapter.L
 
     @Override
     public void onTitileInputClick(String buttonTitle) {
-        if (buttonTitle.equalsIgnoreCase("")) return;
+        if (buttonTitle == null || buttonTitle.equalsIgnoreCase("")) {
+            finish();
+            return;
+        }
 
-        addButton(buttonTitle);
+        Intent intent = new Intent(MainActivity.this, MissionRunActivity.class);
+        intent.putExtra(MissionRunActivity.PARAM_BUTTON_ID, "NEW_MISSION");
+        intent.putExtra("title", buttonTitle);
+        startActivity(intent);
     }
 
     private void startSDKRegistration() {
