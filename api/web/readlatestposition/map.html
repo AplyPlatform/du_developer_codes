@@ -9,13 +9,13 @@
     <script src="https://openlayers.org/en/v4.6.4/build/ol.js"></script>
   </head>
   <body>
-    <div id="map" class="map"></div>    
-    <script>         
+    <div id="map" class="map"></div>
+    <script>
     	var maparray;
     	var dokdo_icon = new ol.Feature({
         geometry: new ol.geom.Point(ol.proj.fromLonLat([131.8661992, 37.2435813]))
       });
-      
+
       dokdo_icon.setStyle(new ol.style.Style({
         image: new ol.style.Icon(/** @type {olx.style.IconOptions} */ ({
           color: '#8959A8',
@@ -23,20 +23,20 @@
           src: 'https://openlayers.org/en/v4.6.4/examples/data/dot.png'
         }))
       }));
-      
+
       var vectorSource = new ol.source.Vector({
         features: [dokdo_icon]
       });
 
       var vectorLayer = new ol.layer.Vector({
         source: vectorSource
-      });            
-    
+      });
+
     	var dokdo = ol.proj.fromLonLat([131.8661992, 37.2435813]);
-    
+
       var view = new ol.View({
         center: dokdo,
-        zoom: 17        
+        zoom: 17
       });
 
       var map = new ol.Map({
@@ -79,15 +79,15 @@
       function elastic(t) {
         return Math.pow(2, -10 * t) * Math.sin((t - 0.075) * (2 * Math.PI) / 0.3) + 1;
       }
-      
-      function flyTo(location, done) {      	      	      	      	      	      	      	
+
+      function flyTo(location, done) {
         var duration = 1500;
         var zoom = view.getZoom();
         var parts = 2;
         var called = false;
-        
+
         dokdo_icon.setGeometry(new ol.geom.Point(location));
-        
+
         function callback(complete) {
           --parts;
           if (called) {
@@ -109,44 +109,52 @@
           zoom: zoom,
           duration: duration / 2
         }, callback);
-      }     
+      }
 
 			function nexttour() {
 				r = maparray[currentindex];
 				var npos = ol.proj.fromLonLat([r.lng *= 1, r.lat *= 1]);
 	    	flyTo(npos, function() {});
-	    	
+
 	    	currentindex++;
 	    	if (currentindex >= mlength) currentindex = 0;
 	    	setTimeout(function() {
                 nexttour();
-         }, 2500);  
+         }, 2500);
 			}
 
-      function tour(r) {        
+      function tour(r) {
         maparray = r;
 	 			currentindex = 0;
-	 			mlength = maparray.length; 
+	 			mlength = maparray.length;
         nexttour();
       }
-      
+
       function getPos() {
-      	$.ajax({url : "http://apis.airpage.org/DRONEPLAYTOKEN/position/theknightsfield@gmail.com/get", 
-      					dataType : "jsonp",      					
-      					contentType : "application/json",      					
-      					cache : false,
-      					type : "GET",
-      					async: false,
-	      				success : function(r) { 
-	      					console.log(JSON.stringify(r)); 				
-	      					tour(r);
-	      				},
-		      				error:function(request,status,error){
-		        				alert("code:"+request.status+"\n"+"message:"+request.responseText+"\n"+"error:"+error);
-    				   	} 	
-      	});
-      }			      
-      
+              var jdata = {"action": "position", "daction": "get", "clientid" : "EMAILADDRESS"};
+              $.ajax({url : "https://api.droneplay.io/v1/",
+                   dataType : "json",
+                   contentType : "application/json",
+                   crossDomain: true,
+                   cache : false,
+                   data : JSON.stringify(jdata),
+                   type : "POST",
+                   async: false,
+                   beforeSend: function(request) {
+                      request.setRequestHeader("droneplay-token", "DRONEPLAYTOKEN");
+                    },
+                   success : function(r) {
+                     console.log(JSON.stringify(r));
+                     if(r.result == "success") {
+                       tour(r);
+                     }
+                   },
+                   error:function(request,status,error){
+                       alert("code:"+request.status+"\n"+"message:"+request.responseText+"\n"+"error:"+error);
+                   }
+            });
+      }
+
       getPos();
     </script>
   </body>

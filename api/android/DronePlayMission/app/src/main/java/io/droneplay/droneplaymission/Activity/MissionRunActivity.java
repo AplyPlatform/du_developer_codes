@@ -1,62 +1,52 @@
 package io.droneplay.droneplaymission.Activity;
 
+import android.annotation.SuppressLint;
 import android.app.ActionBar;
+import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
-import android.database.Cursor;
-import android.graphics.Bitmap;
-import android.graphics.BitmapFactory;
-import android.graphics.ImageFormat;
-import android.graphics.Matrix;
-import android.graphics.Rect;
-import android.graphics.SurfaceTexture;
-import android.graphics.YuvImage;
+import android.content.IntentFilter;
 import android.location.Location;
 import android.location.LocationManager;
-import android.os.AsyncTask;
 import android.os.Bundle;
 import android.os.Handler;
-import android.provider.MediaStore;
+import android.os.Message;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
-import android.support.transition.Transition;
 
 import android.support.v4.app.FragmentActivity;
 import android.util.Log;
 import android.view.SurfaceHolder;
 import android.view.SurfaceView;
-import android.view.TextureView;
 import android.view.View;
 import android.view.WindowManager;
 import android.widget.Button;
-import android.widget.CompoundButton;
-import android.widget.ImageView;
+import android.widget.LinearLayout;
 import android.widget.TextView;
-import android.widget.ToggleButton;
 
 import com.mapbox.mapboxsdk.annotations.Icon;
 import com.mapbox.mapboxsdk.annotations.IconFactory;
 import com.mapbox.mapboxsdk.annotations.Marker;
 import com.mapbox.mapboxsdk.annotations.MarkerOptions;
 import com.mapbox.mapboxsdk.camera.CameraUpdateFactory;
-import com.mapbox.mapboxsdk.constants.Style;
 import com.mapbox.mapboxsdk.geometry.LatLng;
 import com.mapbox.mapboxsdk.maps.MapView;
 import com.mapbox.mapboxsdk.maps.MapboxMap;
 import com.mapbox.mapboxsdk.maps.OnMapReadyCallback;
 
-import java.io.ByteArrayOutputStream;
-import java.io.File;
+import org.json.JSONException;
+import org.json.JSONObject;
+
 import java.nio.ByteBuffer;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Timer;
 import java.util.TimerTask;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.Executor;
-import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
+import dji.common.battery.BatteryState;
 import dji.common.camera.SettingsDefinitions;
 import dji.common.error.DJIError;
 import dji.common.flightcontroller.FlightControllerState;
@@ -67,8 +57,9 @@ import dji.common.mission.waypoint.WaypointMissionExecutionEvent;
 import dji.common.mission.waypoint.WaypointMissionState;
 import dji.common.mission.waypoint.WaypointMissionUploadEvent;
 import dji.common.product.Model;
+import dji.common.remotecontroller.HardwareState;
+import dji.common.useraccount.UserAccountState;
 import dji.common.util.CommonCallbacks;
-import dji.midware.usb.P3.UsbAccessoryService;
 import dji.sdk.base.BaseProduct;
 import dji.sdk.camera.Camera;
 import dji.sdk.camera.VideoFeeder;
@@ -78,44 +69,32 @@ import dji.sdk.mission.MissionControl;
 import dji.sdk.mission.waypoint.WaypointMissionOperator;
 import dji.sdk.mission.waypoint.WaypointMissionOperatorListener;
 import dji.sdk.products.Aircraft;
-import io.droneplay.droneplaymission.DronePlayAPI;
+import dji.sdk.remotecontroller.RemoteController;
+import dji.sdk.useraccount.UserAccountManager;
 import io.droneplay.droneplaymission.DronePlayMissionApplication;
-import io.droneplay.droneplaymission.HelperUtils;
-import io.droneplay.droneplaymission.ModuleVerificationUtil;
+import io.droneplay.droneplaymission.model.FlightRecordItem;
+import io.droneplay.droneplaymission.utils.HelperUtils;
+import io.droneplay.droneplaymission.utils.ModuleVerificationUtil;
 import io.droneplay.droneplaymission.R;
-import io.droneplay.droneplaymission.ToastUtils;
-import io.droneplay.droneplaymission.WaypointManager;
-import io.droneplay.droneplaymission.tf.Classifier;
-import io.droneplay.droneplaymission.tf.TensorFlowImageClassifier;
+import io.droneplay.droneplaymission.utils.ToastUtils;
+import io.droneplay.droneplaymission.utils.WaypointManager;
 
 
-public class MissionRunActivity extends FragmentActivity implements DJICodecManager.YuvDataCallback {
-
-
-    private static final int INPUT_SIZE = 224;
-    private static final int IMAGE_MEAN = 117;
-    private static final float IMAGE_STD = 1;
-    private static final String INPUT_NAME = "input";
-    private static final String OUTPUT_NAME = "output";
-
-    private static final String MODEL_FILE = "file:///android_asset/tensorflow_inception_graph.pb";
-    private static final String LABEL_FILE =
-            "file:///android_asset/imagenet_comp_graph_label_strings.txt";
-
-    private Classifier classifier;
-    private Executor executor = Executors.newSingleThreadExecutor();
-    private boolean bCheck = false;
-
+public class MissionRunActivity extends FragmentActivity implements DJICodecManager.YuvDataCallback, HelperUtils.titleInputClickListener{
     private static final String TAG = MissionRunActivity.class.getSimpleName();
     public static final String PARAM_BUTTON_ID = "buttonID";
     private Marker currentDroneMarker;
+    private String currentMissionName;
 
-    private Button testButton;
-    private Button recogButton;
+    private Button stopButton;
 
     private String buttonID;
 
+    private boolean bWaypointExecuted = false;
+
     private Timer timer = new Timer();
+    private Timer dataTimer = new Timer();
+
     private long timeCounter = 0;
     private long hours = 0;
     private long minutes = 0;
@@ -123,23 +102,20 @@ public class MissionRunActivity extends FragmentActivity implements DJICodecMana
     private String time = "";
 
     private TextView textView;
-    private TextView anView;
     private MapView mMapView = null;
     private MapboxMap mMap = null;
 
     private int WAYPOINT_COUNT = 0;
+    protected FlightController flightController = null;
+    private RemoteController remoteController;
+    protected VideoFeeder.VideoDataListener mReceivedVideoDataCallBack = null;
 
-    private DronePlayAPI dapi;
-
-    private int videoWidth;
-    private int videoHeight;
-
-    protected FlightController flightController;
-    protected VideoFeeder.VideoDataCallback mReceivedVideoDataCallBack = null;
     private WaypointMissionOperator waypointMissionOperator = null;
     private WaypointMissionOperatorListener listener;
     private WaypointManager manager;
     private DJICodecManager mCodecManager = null;
+
+    private BatteryState latestBatteryState;
 
     protected double currentLatitude = 0;
     protected double currentLongitude = 0;
@@ -150,19 +126,22 @@ public class MissionRunActivity extends FragmentActivity implements DJICodecMana
     protected float oldAltitude = 0.0f;
 
     protected SurfaceView videostreamPreviewSf = null;
-    private SurfaceHolder videostreamPreviewSh;
+    private SurfaceHolder videostreamPreviewSh = null;
     private SurfaceHolder.Callback surfaceCallback;
 
-    private Transition transition;
-    private Button mCaptureBtn, mShootPhotoModeBtn, mRecordVideoModeBtn;
-    private ToggleButton mRecordBtn;
     private TextView recordingTime;
 
     private Context mContext;
     private Handler handler;
 
-    private boolean bMissionState = false; //stop
+    private LinearLayout screenForTouch;
+
+    private boolean bPositionTouched = false;
+
+    private boolean bIsRecording = false;
+
     private final Map<String, MarkerOptions> mMarkers = new ConcurrentHashMap<String, MarkerOptions>();
+    private final ArrayList<FlightRecordItem> mFlightRecord = new ArrayList<>();
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -177,42 +156,39 @@ public class MissionRunActivity extends FragmentActivity implements DJICodecMana
         mMapView = (MapView) findViewById(R.id.map);
         mMapView.onCreate(savedInstanceState);
 
-        dapi = new DronePlayAPI(mContext);
         manager = WaypointManager.getInstance();
         waypointMissionOperator = MissionControl.getInstance().getWaypointMissionOperator();
 
-        initTensorFlowAndLoadModel();
         initUI();
 
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+
+        IntentFilter filter = new IntentFilter();
+        filter.addAction(DronePlayMissionApplication.FLAG_CONNECTION_CHANGE);
+        registerReceiver(mReceiver, filter);
+
     }
 
-    private void initTensorFlowAndLoadModel() {
-        executor.execute(new Runnable() {
-            @Override
-            public void run() {
-                try {
-                    classifier = TensorFlowImageClassifier.create(
-                            getAssets(),
-                            MODEL_FILE,
-                            LABEL_FILE,
-                            INPUT_SIZE,
-                            IMAGE_MEAN,
-                            IMAGE_STD,
-                            INPUT_NAME,
-                            OUTPUT_NAME);
-                } catch (final Exception e) {
-                    throw new RuntimeException("Error initializing TensorFlow!", e);
-                }
-            }
-        });
+
+    protected BroadcastReceiver mReceiver = new BroadcastReceiver() {
+
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            onProductConnectionChange();
+        }
+    };
+
+
+    private void onProductConnectionChange()
+    {
+        setUpListener();
     }
 
     private void setMapStyle() {
 
         if (mMap == null) return;
 
-        int kind = HelperUtils.readMapStyle(mContext);
+        int kind = HelperUtils.getInstance().readMapStyle(mContext);
 
         String strKind = getString(R.string.mapbox_style_satellite_streets);;
         switch(kind) {
@@ -256,45 +232,20 @@ public class MissionRunActivity extends FragmentActivity implements DJICodecMana
 
 
         textView = (TextView) findViewById(R.id.mapMon);
-        testButton = (Button) findViewById(R.id.testButton);
-        testButton.setEnabled(true);
-
-        anView = (TextView) findViewById(R.id.anMon);
-
-        recogButton = (Button) findViewById(R.id.recogButton);
+        textView.setVisibility(View.VISIBLE);
+        stopButton = (Button) findViewById(R.id.stopButton);
+        stopButton.setEnabled(false);
 
         videostreamPreviewSf = (SurfaceView) findViewById(R.id.video_previewer_surface);
         recordingTime = (TextView) findViewById(R.id.timer);
-        mCaptureBtn = (Button) findViewById(R.id.btn_capture);
-        mRecordBtn = (ToggleButton) findViewById(R.id.btn_record);
-        mShootPhotoModeBtn = (Button) findViewById(R.id.btn_shoot_photo_mode);
-        mRecordVideoModeBtn = (Button) findViewById(R.id.btn_record_video_mode);
+        recordingTime.setVisibility(View.VISIBLE);
 
-//        mCaptureBtn.setOnClickListener(this);
-//        mRecordBtn.setOnClickListener(this);
-//        mShootPhotoModeBtn.setOnClickListener(this);
-//        mRecordVideoModeBtn.setOnClickListener(this);
-        recordingTime.setVisibility(View.INVISIBLE);
+        screenForTouch = findViewById(R.id.screenForTouch);
 
-        recogButton.setOnClickListener(new View.OnClickListener() {
+        screenForTouch.setOnClickListener(new View.OnClickListener() {
             @Override
-            public void onClick(View v) {
-                bCheck = true;
-                mCodecManager.setYuvDataCallback(MissionRunActivity.this);
-                mCodecManager.enabledYuvData(true);
-            }
-        });
-
-        mRecordBtn.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
-            @Override
-            public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
-                if (isChecked) {
-                    recordingTime.setVisibility(View.VISIBLE);
-                    startRecord();
-                } else {
-                    recordingTime.setVisibility(View.INVISIBLE);
-                    stopRecord();
-                }
+            public void onClick(View view) {
+                bPositionTouched = true;
             }
         });
 
@@ -308,24 +259,22 @@ public class MissionRunActivity extends FragmentActivity implements DJICodecMana
 
                 LatLng latLng = loadMissionsToMap();
                 mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(latLng, 20));
-                mMap.setOnMapClickListener(new MapboxMap.OnMapClickListener() {
-                    @Override
-                    public void onMapClick(@NonNull LatLng point) {
-                        //                Intent intent = new Intent(MissionRunActivity.this, MissionRunBigMapActivity.class);
-                        //                startActivity(intent);
-                        //                finish();
-                    }
-                });
 
-                testButton.setOnClickListener(new View.OnClickListener() {
+                stopButton.setOnClickListener(new View.OnClickListener() {
                     @Override
                     public void onClick(View view) {
 
-                        if (bMissionState == false) {
-                            startMission();
-                        } else {
-                            stopMission();
+                        stopMission();
+
+                        if (flightController != null) {
+                            flightController.getSimulator().stop(null);
+                            flightController.setStateCallback(null);
                         }
+
+                        stopDataScheduler();
+                        stopRecord();
+                        tearDownListener();
+                        HelperUtils.getInstance().uploadFlightRecord(currentMissionName, mFlightRecord, uploadHandler);
                     }
                 });
             }
@@ -340,6 +289,8 @@ public class MissionRunActivity extends FragmentActivity implements DJICodecMana
             }
         };
     }
+
+
     // Method for starting recording
     private void startRecord(){
         if (!ModuleVerificationUtil.isCameraModuleAvailable()) return;
@@ -404,6 +355,7 @@ public class MissionRunActivity extends FragmentActivity implements DJICodecMana
         if (product == null || !product.isConnected()) {
             ToastUtils.setResultToToast("Disconnected");
         } else {
+            if (videostreamPreviewSh != null) return;
 
             videostreamPreviewSh = videostreamPreviewSf.getHolder();
             surfaceCallback = new SurfaceHolder.Callback() {
@@ -419,8 +371,6 @@ public class MissionRunActivity extends FragmentActivity implements DJICodecMana
                         mCodecManager = new DJICodecManager(getApplicationContext(), holder, videoViewWidth,
                                 videoViewHeight);
 
-//                        mCodecManager.enabledYuvData(true);
-//                        mCodecManager.setYuvDataCallback(MissionRunActivity.this);
                     }
 
                 }
@@ -443,13 +393,15 @@ public class MissionRunActivity extends FragmentActivity implements DJICodecMana
             videostreamPreviewSh.addCallback(surfaceCallback);
 
             if (!product.getModel().equals(Model.UNKNOWN_AIRCRAFT)) {
-                VideoFeeder.getInstance().getPrimaryVideoFeed().setCallback(mReceivedVideoDataCallBack);
+                VideoFeeder.getInstance().getPrimaryVideoFeed().addVideoDataListener(mReceivedVideoDataCallBack);
             }
         }
     }
 
     private void uninitPreviewer() {
-        VideoFeeder.getInstance().getPrimaryVideoFeed().setCallback(null);
+        if (mReceivedVideoDataCallBack == null) return;
+        VideoFeeder.getInstance().getPrimaryVideoFeed().removeVideoDataListener(mReceivedVideoDataCallBack);
+        mReceivedVideoDataCallBack = null;
     }
 
     private Marker addMarkerToMap(LatLng latLng, int id) {
@@ -476,6 +428,20 @@ public class MissionRunActivity extends FragmentActivity implements DJICodecMana
         return (latitude > -90 && latitude < 90 && longitude > -180 && longitude < 180) && (latitude != 0f && longitude != 0f);
     }
 
+    private void getBatteryInfo() {
+        try {
+            DronePlayMissionApplication.getProductInstance()
+                    .getBattery().setStateCallback(new BatteryState.Callback() {
+                @Override
+                public void onUpdate(BatteryState batteryState) {
+                    latestBatteryState = batteryState;
+                }
+            });
+        } catch (Exception ignored) {
+
+        }
+    }
+
     private void updateWaypointMissionState() {
 
         if (Double.isNaN(currentLatitude)
@@ -488,8 +454,70 @@ public class MissionRunActivity extends FragmentActivity implements DJICodecMana
                 && currentLatitude == oldLatitude
                 && currentLongitude == oldLongitude) return;
 
-        dapi.sendMyPosition(currentLatitude, currentLongitude, currentAltitude);
+        getBatteryInfo();
+
+        runOnUiThread(new Runnable(){
+            @Override
+            public void run() {
+                textView.setText("H:" + String.format("%.3f", currentAltitude)
+                        + "/La:" + String.format("%.3f", currentLatitude)
+                        + "/Ln:" + String.format("%.3f", currentLongitude)
+                        + (latestBatteryState == null ? "" : ("/Bt:" + String.valueOf(latestBatteryState.getChargeRemainingInPercent())) + "%"));
+            }
+        });
+    }
+
+    @Override
+    public void onTitileInputClick(String buttonTitle) {
+        if (buttonTitle == null || buttonTitle.equalsIgnoreCase("")) {
+            finish();
+            return;
+        }
+
+        currentMissionName = buttonTitle;
+        startNewMission();
+    }
+
+    // 첫 번째 TimerTask 를 이용한 방법
+    class DataTimer extends TimerTask{
+        @Override
+        public void run() {
+            sendDataToServer(0);
+        }
+    }
+
+    private void startDataScheduler() {
+        dataTimer.schedule(new DataTimer(), 2000, 2000);
+    }
+
+    private void stopDataScheduler() {
+        dataTimer.cancel();
+    }
+
+
+    private void sendDataToServer(int currentAction) {
+
+        FlightRecordItem item = new FlightRecordItem();
+        item.act = String.valueOf(currentAction);
+        item.alt = String.valueOf(currentAltitude);
+        item.lat = String.valueOf(currentLatitude);
+        item.lng = String.valueOf(currentLongitude);
+        //item.actParam = String.valueOf()
+        item.etc.battery = String.valueOf(latestBatteryState.getChargeRemainingInPercent());
+        item.etc.marked = bPositionTouched ? "true" : "false";
+        item.dsec = String.valueOf(timeCounter);
+        item.dtimestamp = HelperUtils.getInstance().getTimeStamp();
+        mFlightRecord.add(item);
+
+        HelperUtils.getInstance().sendMyPosition(item);
+
+
         final LatLng latlng = new LatLng(currentLatitude, currentLongitude);
+
+        if (bPositionTouched == true) {
+            bPositionTouched = false;
+            ToastUtils.setResultToToast("Position is marked.");
+        }
 
         runOnUiThread(new Runnable(){
             @Override
@@ -498,8 +526,6 @@ public class MissionRunActivity extends FragmentActivity implements DJICodecMana
                     mMap.removeMarker(currentDroneMarker);
 
                 currentDroneMarker = addMarkerToMap(latlng, R.mipmap.drone);
-
-                //textView.setText(currentDroneMarkerName);
 
                 oldAltitude = currentAltitude;
                 oldLatitude = currentLatitude;
@@ -515,14 +541,49 @@ public class MissionRunActivity extends FragmentActivity implements DJICodecMana
         BaseProduct product = DronePlayMissionApplication.getProductInstance();
 
         if (product == null || !product.isConnected()) {
-            ToastUtils.setResultToToast("Disconnect");
+            ToastUtils.setResultToToast("Disconnected");
             return;
         } else {
+
+            if (ModuleVerificationUtil.isRemoteControllerAvailable()) {
+                remoteController = ((Aircraft) product).getRemoteController();
+
+                remoteController.setHardwareStateCallback(new HardwareState.HardwareStateCallback() {
+                    @Override
+                    public void onUpdate(@NonNull HardwareState rcHardwareState) {
+                        HardwareState.Button btn = rcHardwareState.getShutterButton();
+                        if (btn != null && btn.isClicked()) {
+                            sendDataToServer(1);
+                            return;
+                        }
+
+                        HardwareState.Button btnR = rcHardwareState.getRecordButton();
+                        if (btnR != null && btnR.isClicked()) {
+
+                            if (bIsRecording == false)
+                                sendDataToServer(2); // START_RECORD
+                            else
+                                sendDataToServer(3); // STOP_RECORD
+
+                            bIsRecording = !bIsRecording;
+                        }
+                    }
+                });
+            }
+
+            if (flightController != null) return;
+
             if (product instanceof Aircraft) {
                 flightController = ((Aircraft) product).getFlightController();
             }
 
             if (flightController != null) {
+                flightController.setMaxFlightRadiusLimitationEnabled(false, new CommonCallbacks.CompletionCallback() {
+                    @Override
+                    public void onResult(DJIError djiError) {
+
+                    }
+                });
 
                 flightController.setStateCallback(new FlightControllerState.Callback() {
                     @Override
@@ -535,13 +596,13 @@ public class MissionRunActivity extends FragmentActivity implements DJICodecMana
                     }
                 });
 
-                mReceivedVideoDataCallBack = new VideoFeeder.VideoDataCallback() {
+                mReceivedVideoDataCallBack = new VideoFeeder.VideoDataListener() {
                     @Override
                     public void onReceive(byte[] videoBuffer, int size) {
 
 
                         if (mCodecManager != null) {
-                            mCodecManager.sendDataToDecoder(videoBuffer, size, UsbAccessoryService.VideoStreamSource.Camera.getIndex());
+                            mCodecManager.sendDataToDecoder(videoBuffer, size);
                         }
                     }
                 };
@@ -593,31 +654,33 @@ public class MissionRunActivity extends FragmentActivity implements DJICodecMana
 
             @Override
             public void onExecutionStart() {
+                mFlightRecord.clear();
                 ToastUtils.setResultToToast("Execution started!");
                 updateWaypointMissionState();
-                if(mMap != null)
-                    mMap.clear();
-                bMissionState = true;
-                mMapView.setClickable(false);
-                runOnUiThread(new Runnable() {
+                runOnUiThread(new Runnable(){
                     @Override
                     public void run() {
-                        testButton.setText("STOP");
+                        if(mMap != null)
+                            mMap.clear();
+
+                        mMapView.setClickable(false);
+                        stopButton.setEnabled(true);
+                        bWaypointExecuted = true;
                     }
                 });
             }
 
             @Override
             public void onExecutionFinish(@Nullable DJIError djiError) {
+                HelperUtils.getInstance().uploadFlightRecord(buttonID, mFlightRecord, uploadHandler);
                 ToastUtils.setResultToToast("Execution finished!");
                 updateWaypointMissionState();
-                mMapView.setClickable(true);
-                bMissionState = false;
-
-                runOnUiThread(new Runnable() {
+                runOnUiThread(new Runnable(){
                     @Override
                     public void run() {
-                        testButton.setText("START");
+                        mMapView.setClickable(true);
+                        stopButton.setEnabled(false);
+                        bWaypointExecuted = false;
                     }
                 });
             }
@@ -625,6 +688,45 @@ public class MissionRunActivity extends FragmentActivity implements DJICodecMana
 
         waypointMissionOperator.addListener(listener);
     }
+
+
+    @SuppressLint("HandlerLeak")
+    private final Handler uploadHandler = new Handler() {
+        @Override
+        public void handleMessage(Message message) {
+            switch (message.what) {
+                case R.id.req_succeeded:
+
+                    String resultContent = (String) message.obj;
+                    try {
+                        JSONObject json = new JSONObject(resultContent);
+                        String result = json.getString("result");
+                        if (result != null && result.equalsIgnoreCase("success")) {
+
+                        }
+
+                    } catch (JSONException e) {
+                        e.printStackTrace();
+                    }
+
+                    try {
+                        if(resultContent != null) {
+
+                        }
+                        else {
+
+                        }
+                    } catch (Exception e) {
+
+                    }
+
+                    return;
+                case R.id.req_failed:
+
+                    break;
+            }
+        }
+    };
 
 
     private LatLng loadMissionsToMap() {
@@ -668,19 +770,54 @@ public class MissionRunActivity extends FragmentActivity implements DJICodecMana
         return dockdo;
     }
 
+
+    private void startNewMission() {
+        setUpListener();
+        initPreviewer();
+        startDataScheduler();
+        startRecord();
+    }
+
+
+
     @Override
     public void onResume() {
         super.onResume();  // Always call the superclass method first
 
         Intent i = getIntent();
         buttonID = i.getStringExtra(PARAM_BUTTON_ID);
-        manager.setMission(buttonID);
-
-
-        setUpListener();
-        initPreviewer();
-        uploadMission();
+        if (buttonID != null && buttonID.equalsIgnoreCase("NEW_MISSION")) {
+            HelperUtils.getInstance().showTitleInputDialog(this, this);
+        }
+        else {
+            setUpListener();
+            initPreviewer();
+            loadMission();
+        }
     }
+
+
+    @Override
+    public void onPause() {
+        super.onPause();  // Always call the superclass method first
+
+        stopMission();
+
+        if (flightController != null) {
+            flightController.getSimulator().stop(null);
+            flightController.setStateCallback(null);
+        }
+
+        stopDataScheduler();
+        stopRecord();
+        tearDownListener();
+
+        if (bWaypointExecuted == true) {
+            HelperUtils.getInstance().uploadFlightRecord(buttonID, mFlightRecord, uploadHandler);
+            bWaypointExecuted = false;
+        }
+    }
+
 
     private void uploadMission() {
         if (WaypointMissionState.READY_TO_RETRY_UPLOAD.equals(waypointMissionOperator.getCurrentState())
@@ -689,14 +826,37 @@ public class MissionRunActivity extends FragmentActivity implements DJICodecMana
                 @Override
                 public void onResult(DJIError djiError) {
                     if (djiError != null) {
-                        showResultToast(djiError);
+                        waypointMissionOperator.retryUploadMission(new CommonCallbacks.CompletionCallback() {
+                            @Override
+                            public void onResult(DJIError djiError) {
+                                if (djiError != null)
+                                    showResultToast(djiError);
+                                else
+                                    startMission();
+                            }
+                        });
+                    }
+                    else {
+                        startMission();
                     }
 
                 }
             });
-        } else {
-            ToastUtils.setResultToToast("Not ready!");
-            finish();
+        } else if (WaypointMissionState.EXECUTING.equals(waypointMissionOperator.getCurrentState())) {
+
+        }
+        else if (WaypointMissionState.EXECUTION_PAUSED.equals(waypointMissionOperator.getCurrentState())) {
+            waypointMissionOperator.resumeMission(new CommonCallbacks.CompletionCallback() {
+                @Override
+                public void onResult(DJIError djiError) {
+                    if (djiError != null) {
+                        showResultToast(djiError);
+                    }
+                    else {
+
+                    }
+                }
+            });
         }
     }
 
@@ -704,17 +864,31 @@ public class MissionRunActivity extends FragmentActivity implements DJICodecMana
         WaypointManager.getInstance().setMission(buttonID);
         WaypointMission mission = WaypointManager.getInstance().getWaypointMission();
         DJIError djiError = waypointMissionOperator.loadMission(mission);
-        if (djiError != null)
+        if (djiError != null) {
             showResultToast(djiError);
+            //finish();
+        }
+        else {
+            uploadMission();
+        }
     }
 
     private void startMission() {
-        if (waypointMissionOperator.getCurrentState() == WaypointMissionState.EXECUTING) return;
+//        if (waypointMissionOperator.getCurrentState() != WaypointMissionState.READY_TO_EXECUTE) {
+//            ToastUtils.setResultToToast("Not ready to execute ! Why ??");
+//            return;
+//        }
 
         waypointMissionOperator.startMission(new CommonCallbacks.CompletionCallback() {
             @Override
             public void onResult(DJIError djiError) {
-                showResultToast(djiError);
+                if (djiError == null) {
+                    startDataScheduler();
+                    startRecord();
+                }
+                else {
+                    showResultToast(djiError);
+                }
             }
         });
     }
@@ -724,7 +898,13 @@ public class MissionRunActivity extends FragmentActivity implements DJICodecMana
         waypointMissionOperator.stopMission(new CommonCallbacks.CompletionCallback() {
             @Override
             public void onResult(DJIError djiError) {
-                showResultToast(djiError);
+                if (djiError == null) {
+                    stopDataScheduler();
+                    stopRecord();
+                }
+                else {
+                    showResultToast(djiError);
+                }
             }
         });
 
@@ -734,20 +914,11 @@ public class MissionRunActivity extends FragmentActivity implements DJICodecMana
         if (waypointMissionOperator != null && listener != null) {
             // Example of removing listeners
             waypointMissionOperator.removeListener(listener);
+
+            listener = null;
         }
 
         uninitPreviewer();
-    }
-
-    @Override
-    public void onPause() {
-        super.onPause();  // Always call the superclass method first
-
-        tearDownListener();
-        if (flightController != null) {
-            flightController.getSimulator().stop(null);
-            flightController.setStateCallback(null);
-        }
     }
 
     private Location getCurrentLocation() {
@@ -762,11 +933,8 @@ public class MissionRunActivity extends FragmentActivity implements DJICodecMana
 
     private void showResultToast(DJIError djiError) {
         ToastUtils.setResultToToast(djiError == null ? "Action started!" : djiError.getDescription());
+        Log.d(TAG, djiError.getDescription());
     }
-
-
-
-
 
 
     @Override
@@ -774,27 +942,6 @@ public class MissionRunActivity extends FragmentActivity implements DJICodecMana
         DronePlayMissionApplication.getEventBus().unregister(mContext);
         super.onDestroy();
     }
-
-//
-//    @Override
-//    public void onClick(View view) {
-//        switch (view.getId()) {
-//            case R.id.btn_capture:{
-//                captureAction();
-//                break;
-//            }
-//            case R.id.btn_shoot_photo_mode:{
-//                switchCameraMode(SettingsDefinitions.CameraMode.SHOOT_PHOTO);
-//                break;
-//            }
-//            case R.id.btn_record_video_mode:{
-//                switchCameraMode(SettingsDefinitions.CameraMode.RECORD_VIDEO);
-//                break;
-//            }
-//            default:
-//                break;
-//        }
-//    }
 
     private void switchCameraMode(SettingsDefinitions.CameraMode cameraMode) {
         if (!ModuleVerificationUtil.isCameraModuleAvailable()) return;
@@ -848,51 +995,6 @@ public class MissionRunActivity extends FragmentActivity implements DJICodecMana
 
     @Override
     public void onYuvDataReceived(ByteBuffer byteBuffer, int dataSize, final int width, final int height) {
-        if (bCheck == true) {
-            bCheck = false;
-            final byte[] bytes = new byte[dataSize];
-            byteBuffer.get(bytes);
 
-            if (mCodecManager != null) {
-                mCodecManager.enabledYuvData(false);
-                mCodecManager.setYuvDataCallback(null);
-            }
-            //DJILog.d(TAG, "onYuvDataReceived2 " + dataSize);
-            AsyncTask.execute(new Runnable() {
-                @Override
-                public void run() {
-                    Bitmap bitmap = getYuvDataToBMP(bytes, width, height);
-
-                    if (bitmap == null) return;
-
-                    bitmap = Bitmap.createScaledBitmap(bitmap, INPUT_SIZE, INPUT_SIZE, false);
-
-                    //imageViewResult.setImageBitmap(bitmap);
-
-                    final List<Classifier.Recognition> results = classifier.recognizeImage(bitmap);
-
-                    if (results != null) {
-
-                        runOnUiThread(new Runnable() {
-                            @Override
-                            public void run() {
-                                anView.setText(results.toString());
-                            }
-                        });
-
-                    }
-                }
-            });
-        }
-    }
-
-    private Bitmap getYuvDataToBMP(byte[] bytes, int width, int height) {
-        ByteArrayOutputStream out = new ByteArrayOutputStream();
-        YuvImage yuvImage = new YuvImage(bytes, ImageFormat.NV21, width, height, null);
-        yuvImage.compressToJpeg(new Rect(0, 0, width, height), 50, out);
-        byte[] imageBytes = out.toByteArray();
-        Bitmap image = BitmapFactory.decodeByteArray(imageBytes, 0, imageBytes.length);
-
-        return image;
     }
 }

@@ -7,20 +7,22 @@
     android:orientation="vertical">
     <ListView
         android:layout_weight="1"
-        android:background="#fff"
+        android:background="#aaa"
         android:id="@+id/listviewMain"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"/>
 
+
     <Button
-        android:layout_weight="0"
         android:id="@+id/btnNewMission"
         android:layout_width="match_parent"
         android:layout_height="100dp"
         android:layout_margin="10dp"
-        android:text="+"
+        android:text="비행 시작"
         android:background="@drawable/roundedbutton"
-        android:textSize="40dp"
+        android:textSize="20dp"
         android:textStyle="bold"
+        android:layout_alignParentLeft="true"
         android:typeface="sans" />
+
 </LinearLayout>

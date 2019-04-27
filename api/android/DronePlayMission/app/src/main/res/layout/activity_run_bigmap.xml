@@ -33,66 +33,7 @@
             android:orientation="vertical"
             android:layout_width="match_parent"
             android:layout_height="match_parent">
-                <fragment
-                    android:id="@+id/map"
-                    android:background="#99ffffff"
-                    android:layout_weight="4"
-                    android:layout_gravity="center"
-                    android:layout_centerHorizontal="true"
-                    android:name="com.google.android.gms.maps.SupportMapFragment"
-                    android:layout_width="match_parent"
-                    android:layout_height="match_parent" />
-                <LinearLayout
-                    android:visibility="gone"
-                    android:layout_weight="1"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="horizontal"
-                    android:id="@+id/linearLayout">
 
-                    <Button
-                        android:id="@+id/btn_capture"
-                        android:text="Capture"
-                        android:layout_marginRight="10dp"
-                        android:background="#333"
-                        android:textColor="#fff"
-                        android:textSize="10dp"
-                        android:layout_width="70dp"
-                        android:layout_height="30dp" />
-
-                    <ToggleButton
-                        android:id="@+id/btn_record"
-                        android:layout_marginRight="10dp"
-                        android:background="#333"
-                        android:textColor="#fff"
-                        android:layout_width="70dp"
-                        android:layout_height="30dp"
-                        android:text="Rec."
-                        android:textOff="Rec."
-                        android:textOn="Stop Rec."
-                        android:textSize="10dp"
-                        android:checked="false" />
-
-                    <Button
-                        android:id="@+id/btn_shoot_photo_mode"
-                        android:text="Photo Mode"
-                        android:layout_marginRight="10dp"
-                        android:background="#333"
-                        android:textColor="#fff"
-                        android:textSize="10dp"
-                        android:layout_width="70dp"
-                        android:layout_height="30dp"
-                        />
-
-                    <Button
-                        android:id="@+id/btn_record_video_mode"
-                        android:text="Video Mode"
-                        android:background="#333"
-                        android:textColor="#fff"
-                        android:textSize="10dp"
-                        android:layout_width="70dp"
-                        android:layout_height="30dp" />
-                </LinearLayout>
         </LinearLayout>
     </RelativeLayout>
 

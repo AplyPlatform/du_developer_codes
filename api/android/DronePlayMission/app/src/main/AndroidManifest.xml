@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
     package="io.droneplay.droneplaymission">
 
     <!--
@@ -22,6 +23,11 @@
     <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
     <uses-permission android:name="android.permission.READ_PHONE_STATE" />
 
+    <!-- To auto-complete the email text field in the login form with the user's emails -->
+    <uses-permission android:name="android.permission.GET_ACCOUNTS" />
+    <uses-permission android:name="android.permission.READ_PROFILE" />
+    <uses-permission android:name="android.permission.READ_CONTACTS" />
+
     <uses-feature android:name="android.hardware.camera" />
     <uses-feature android:name="android.hardware.camera.autofocus" />
     <uses-feature
@@ -32,56 +38,72 @@
         android:required="true" />
 
     <application
-        android:name=".DronePlayMissionApplication"
-        android:allowBackup="true"
+        android:name=".MApplication"
+        android:allowBackup="false"
         android:icon="@mipmap/ic_launcher"
         android:label="@string/app_name"
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
+        android:largeHeap="true"
+        android:usesCleartextTraffic="false"
+        tools:ignore="GoogleAppIndexingWarning"
         android:theme="@style/AppTheme">
         <meta-data
+            android:name="com.facebook.sdk.ApplicationId"
+            android:value="@string/facebook_app_id" />
+        <meta-data
+            android:name="google.recaptcha.SITEKEY"
+            android:value="6LcHeJwUAAAAALYWmfDl-AlCtvcmQ-VUI-bnhdsS" />
+        <meta-data
             android:name="mapbox.sdk.ACCESSTOKEN"
-            android:value="MAPBOX-SDK-ACCESS-TOKEN" />
+            android:value="MAPBOX_SDK_ACCESSTOKEN" />
         <meta-data
             android:name="com.dji.sdk.API_KEY"
-            android:value="DJI-SDK-API-KEY" />
-        <meta-data
-            android:name="io.droneplay.token"
-            android:value="DRONEPLAY-API-TOKEN" />
-        <meta-data
-            android:name="io.droneplay.email"
-            android:value="DRONEPLAY-API-EMAIL" />
-
+            android:value="DJI_SDK_API_KEY" />
         <activity
             android:name=".Activity.MapsActivity"
             android:configChanges="orientation|keyboardHidden|screenSize"
             android:label="@string/title_activity_maps"
-            android:launchMode="singleTop"
-            android:screenOrientation="portrait">
-        </activity>
+            android:launchMode="singleInstance"
+            android:screenOrientation="portrait" />
         <activity
-            android:theme="@android:style/Theme.Holo.NoActionBar.Fullscreen"
-            android:configChanges="orientation|keyboardHidden|screenSize"
             android:name=".Activity.MissionRunActivity"
-            android:launchMode="singleTop"
-            android:screenOrientation="sensorLandscape">
-        </activity>
+            android:configChanges="orientation|screenSize"
+            android:launchMode="singleInstance"
+            android:screenOrientation="landscape"
+            android:theme="@android:style/Theme.Holo.NoActionBar.Fullscreen" />
         <activity
-            android:theme="@android:style/Theme.Holo.NoActionBar.Fullscreen"
-            android:configChanges="orientation|keyboardHidden|screenSize"
-            android:name=".Activity.MissionRunBigMapActivity"
-            android:launchMode="singleTop"
-            android:screenOrientation="sensorLandscape">
+            android:name="com.facebook.FacebookActivity"
+            android:launchMode="singleInstance"
+            android:configChanges="keyboard|keyboardHidden|screenLayout|screenSize|orientation"
+            android:label="@string/app_name" >
         </activity>
+
+        <activity android:name="com.facebook.CustomTabActivity" android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="@string/fb_login_protocol_scheme" />
+            </intent-filter>
+        </activity>
+
         <activity
-            android:theme="@style/Theme.AppCompat.Light"
             android:name=".Activity.MainActivity"
-            android:launchMode="singleTop"
-            android:screenOrientation="portrait">
+            android:launchMode="singleInstance"
+            android:screenOrientation="portrait"
+            android:theme="@style/Theme.AppCompat.Light">
+
+        </activity>
+        <service android:name="dji.sdk.sdkmanager.DJIGlobalService" >
+        </service>
+        <activity android:name=".Activity.LoginActivity"
+            android:launchMode="singleInstance">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
+
             <intent-filter>
                 <action android:name="android.hardware.usb.action.USB_ACCESSORY_ATTACHED" />
             </intent-filter>
@@ -89,6 +111,9 @@
             <meta-data
                 android:name="android.hardware.usb.action.USB_ACCESSORY_ATTACHED"
                 android:resource="@xml/accessory_filter" />
+        </activity>
+        <activity android:name=".Activity.RegisterActivity"
+            android:launchMode="singleInstance">
         </activity>
     </application>
 

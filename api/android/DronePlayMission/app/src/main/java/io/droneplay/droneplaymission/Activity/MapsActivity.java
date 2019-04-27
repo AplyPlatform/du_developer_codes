@@ -5,7 +5,6 @@ import android.content.Context;
 import android.content.Intent;
 import android.location.Location;
 import android.location.LocationManager;
-import android.os.Handler;
 import android.os.Bundle;
 import android.support.annotation.NonNull;
 import android.support.v7.app.AppCompatActivity;
@@ -32,9 +31,9 @@ import java.util.concurrent.ConcurrentHashMap;
 
 import dji.common.mission.waypoint.Waypoint;
 import dji.common.mission.waypoint.WaypointMission;
-import io.droneplay.droneplaymission.HelperUtils;
+import io.droneplay.droneplaymission.utils.HelperUtils;
 import io.droneplay.droneplaymission.R;
-import io.droneplay.droneplaymission.WaypointManager;
+import io.droneplay.droneplaymission.utils.WaypointManager;
 
 
 public class MapsActivity extends AppCompatActivity implements HelperUtils.markerDataInputClickListener {
@@ -55,8 +54,6 @@ public class MapsActivity extends AppCompatActivity implements HelperUtils.marke
 
     private final Map<String, MarkerOptions> mMarkers = new ConcurrentHashMap<String, MarkerOptions>();
 
-    private boolean doubleBackToExitPressedOnce = false;
-
     private int markerid = 0;
 
     private Context mContext;
@@ -69,7 +66,6 @@ public class MapsActivity extends AppCompatActivity implements HelperUtils.marke
 
         setContentView(R.layout.activity_maps);
         mContext = this;
-        // Obtain the SupportMapFragment and get notified when the map is ready to be used.
 
         mMapView = (MapView) findViewById(R.id.map);
         mMapView.onCreate(savedInstanceState);
@@ -79,7 +75,8 @@ public class MapsActivity extends AppCompatActivity implements HelperUtils.marke
         mapButton = (Button) findViewById(R.id.mapButton);
         manager = WaypointManager.getInstance();
 
-        mMapView.setStyleUrl(Style.DARK);
+        getSupportActionBar().hide();
+
         mMapView.getMapAsync(new OnMapReadyCallback() {
             @Override
             public void onMapReady(final MapboxMap mapboxMap) {
@@ -107,8 +104,8 @@ public class MapsActivity extends AppCompatActivity implements HelperUtils.marke
                 saveButton.setOnClickListener(new View.OnClickListener() {
                     @Override
                     public void onClick(View view) {
-                        HelperUtils.saveMapStyle(mContext, mapKind);
-                        manager.saveMissionToFile(mContext, buttonID);
+                        HelperUtils.getInstance().saveMapStyle(mContext, mapKind);
+                        //manager.saveMissionToFile(mContext, buttonID);
                     }
                 });
 
@@ -119,36 +116,22 @@ public class MapsActivity extends AppCompatActivity implements HelperUtils.marke
                     }
                 });
 
-                mMap.setOnMapClickListener(new MapboxMap.OnMapClickListener() {
-                                               @Override
-                                               public void onMapClick(@NonNull LatLng point) {
-                                                   Log.d(TAG, "onMapClick");
-
-                                                   addMarkerToClickPoint(point);
-                                               }
+                mMap.addOnMapClickListener(new MapboxMap.OnMapClickListener() {
+                    @Override
+                    public void onMapClick(@NonNull LatLng point) {
+                        Log.d(TAG, "onMapClick");
+                        addMarker(4, point);
+                    }
                 });
+                
 
                 mMap.setOnMarkerClickListener(new MapboxMap.OnMarkerClickListener() {
                     @Override
                     public boolean onMarkerClick(@NonNull Marker marker) {
                         Log.d(TAG, "onMarkerClick");
-                        if (doubleBackToExitPressedOnce) {
-                            mMarkers.remove(marker.getTitle());
-                            manager.removeAction(marker.getTitle());
-                            marker.remove();
-                            String showText = String.format("Count: %d", mMarkers.size());
-                            textView.setText(showText);
-                        } else {
-                            doubleBackToExitPressedOnce = true;
-                            new Handler().postDelayed(new Runnable() {
 
-                                @Override
-                                public void run() {
-                                    doubleBackToExitPressedOnce = false;
-                                }
-                            }, 1500);
-                        }
-
+                        String strTitle = marker.getTitle();
+                        modifyMarkerFromClickPoint(strTitle, manager.getAlt(strTitle));
                         return false;
                     }
                 });
@@ -286,16 +269,46 @@ public class MapsActivity extends AppCompatActivity implements HelperUtils.marke
         return dockdo;
     }
 
-    private void addMarkerToClickPoint(LatLng latLng) {
-        HelperUtils.showMarkerDataInputDialog(mContext, latLng, this);
+    private void modifyMarkerFromClickPoint(String markerName, int altitude) {
+        HelperUtils.getInstance().showMarkerDataInputDialog(mContext, markerName, altitude, this);
     }
 
-    @Override
-    public void onMarkerDataInputClick(int altitude, LatLng latLng) {
+    private void modifyMarker(String markerName, int altitude, int act, int actParam, int speed) {
+        manager.modifyAction(markerName, altitude, act, actParam, speed);
+    }
+
+    private void deleteMarker(String markerName) {
+        List<Marker> markers = mMap.getMarkers();
+
+        for(Marker marker : markers) {
+            if (marker.getTitle().equalsIgnoreCase(markerName)) {
+                marker.remove();
+                break;
+            }
+        }
+
+        mMarkers.remove(markerName);
+        manager.removeAction(markerName);
+    }
+
+    private void addMarker(int altitude, LatLng latLng) {
         String markerName = addMarkerToMap(latLng);
         String showText = String.format("Count: %d\nLat: %.4f, Lng: %.4f", mMarkers.size(), latLng.getLatitude(), latLng.getLongitude());
         textView.setText(showText);
-        manager.addAction(markerName,latLng.getLatitude(),latLng.getLongitude(), altitude, 0);
+        manager.addAction(markerName,latLng.getLatitude(),latLng.getLongitude(), altitude, 0, 0, 5);
+    }
+
+    @Override
+    public void onMarkerDataInputClick(String markerName, int nHow, int altitude, int act, int actParam, int speed) {
+
+        switch(nHow) {
+            case 0:
+                deleteMarker(markerName);
+                break;
+            case 1:
+                modifyMarker(markerName, altitude, act, actParam, speed);
+                break;
+        }
     }
 
     @Override
@@ -315,7 +328,6 @@ public class MapsActivity extends AppCompatActivity implements HelperUtils.marke
                 .title(markerName)
                 .snippet(markerName);
         mMap.addMarker(nMarker);
-        //CameraPosition pos = mMap.getCameraPosition();
         mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(latLng, 20));
     }
 
