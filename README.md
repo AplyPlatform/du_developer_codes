@@ -20,7 +20,7 @@ targetSdkVersion 26
 </code>
 </pre>
 
-+ 코드의 수행을 위해 Manifest 파일에 Mapbox 지도 ACCESS TOKEN, DJI SDK API KEY, DRONEPLAY API TOKEN 정보를 입력해야 합니다.        
++ 코드의 수행을 위해 Manifest 파일에 Mapbox 지도 ACCESS TOKEN, DJI SDK API KEY 정보를 입력해야 합니다.        
 > AndroidManifest.xml
 <pre>
 <code>
@@ -30,14 +30,6 @@ targetSdkVersion 26
 ... meta-data
            android:name="com.dji.sdk.API_KEY"
            android:value="DJI-SDK-API-KEY" ...
-
-... meta-data
-           android:name="io.droneplay.token"
-           android:value="DRONEPLAY-API-TOKEN" ...
-
-... meta-data
-           android:name="io.droneplay.email"
-           android:value="DRONEPLAY-API-EMAIL" ...
 </code>
 </pre>
 
