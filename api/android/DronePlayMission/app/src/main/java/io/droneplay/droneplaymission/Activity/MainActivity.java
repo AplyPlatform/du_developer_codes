@@ -30,6 +30,9 @@ import com.google.gson.GsonBuilder;
 import com.google.gson.reflect.TypeToken;
 
 
+import org.json.JSONException;
+import org.json.JSONObject;
+
 import java.lang.reflect.Type;
 import java.util.ArrayList;
 import java.util.List;
@@ -61,6 +64,7 @@ public class MainActivity extends AppCompatActivity implements MainListAdapter.L
     private MainListAdapter adapter;
     private Button newMissionBtn;
 
+    private String removeButtonID = "";
     private static ProgressDialog spinner = null;
 
     private static final String TAG = MainActivity.class.getName();
@@ -119,7 +123,6 @@ public class MainActivity extends AppCompatActivity implements MainListAdapter.L
         filter.addAction(DronePlayMissionApplication.FLAG_CONNECTION_CHANGE);
         registerReceiver(mReceiver, filter);
 
-
         spinner = new ProgressDialog(this);
         spinner.setCancelable(false);
 
@@ -127,18 +130,9 @@ public class MainActivity extends AppCompatActivity implements MainListAdapter.L
     }
 
 
-    private void addButton(String title) {
-//        String newId = HelperUtils.generateButtonID(adapter.getList());
-//        adapter.addItem(title, newId);
-//        HelperUtils.saveButtons(adapter.getList());
-//        adapter.notifyDataSetChanged();
-    }
-
     private void deleteButton(String buttonid) {
-//        HelperUtils.deleteMissionsFromFile(buttonid);
-//        adapter.removeItem(buttonid);
-//        HelperUtils.saveButtons(adapter.getList());
-//        adapter.notifyDataSetChanged();
+        removeButtonID = buttonid;
+        HelperUtils.getInstance().deleteButtonsFromServer(buttonid, deleteHandler);
     }
 
     private void Init() {
@@ -158,6 +152,37 @@ public class MainActivity extends AppCompatActivity implements MainListAdapter.L
         HelperUtils.getInstance().loadButtonsFromServer(requestListHandler);
     }
 
+
+    @SuppressLint("HandlerLeak")
+    private final Handler deleteHandler = new Handler() {
+        @Override
+        public void handleMessage(Message message) {
+
+            hideLoader();
+            switch (message.what) {
+                case R.id.req_succeeded:
+
+                    String resultContent = (String) message.obj;
+                    try {
+                        JSONObject json = new JSONObject(resultContent);
+                        String result = (String) json.get("result");
+                        if (result != null && result.equalsIgnoreCase("success")) {
+                            adapter.removeItem(removeButtonID);
+                            adapter.notifyDataSetChanged();
+                            showToast("Successfully, removed.");
+                        }
+                    } catch (JSONException e) {
+                        e.printStackTrace();
+                        showToast("Failed - "  + e.getMessage());
+                    }
+
+                    return;
+                case R.id.req_failed:
+                    showToast("Failed to remove");
+                    break;
+            }
+        }
+    };
 
 
     @SuppressLint("HandlerLeak")

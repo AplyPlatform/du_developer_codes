@@ -1,5 +1,10 @@
 package io.droneplay.droneplaymission.utils;
 
+import android.content.Context;
+import android.os.Handler;
+import android.widget.Toast;
+
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
@@ -87,6 +92,15 @@ public class WaypointManager {
         }
     }
 
+    public void saveMissionToServer(Context context, String buttonID, Handler handler) {
+
+        if (tempwaypointList.size() <= 0) {
+            return;
+        }
+
+        HelperUtils.getInstance().saveButtonsToServer(buttonID, tempwaypointList, handler);
+    }
+
 /*
     public void saveMissionToFile(Context context, String buttonID) {
 
@@ -109,7 +123,7 @@ public class WaypointManager {
         data.act = action;
         data.id = markerName;
         data.alt = alt;
-        data.lon = lng;
+        data.lng = lng;
         data.lat = lat;
         data.speed = speed;
         data.actparam = actParam;
@@ -127,16 +141,16 @@ public class WaypointManager {
         d.speed = speed;
     }
 
-    public int getAlt(String markerName) {
+    public WaypointData getData(String markerName) {
         WaypointData d = getAction(markerName);
-        if (d == null) return -1;
-
-        return (int) d.alt;
+        return d;
     }
 
     private WaypointData getAction(String markerName) {
 
         for(WaypointData d : tempwaypointList) {
+            if (d.id == null) continue;
+
             if (d.id.equalsIgnoreCase(markerName)) {
                 return d;
             }
@@ -151,7 +165,8 @@ public class WaypointManager {
         mwaypointList.clear();
 
         for( WaypointData data : tempwaypointList ) {
-            Waypoint eachWaypoint = new Waypoint(data.lat,data.lon,data.alt);
+
+            Waypoint eachWaypoint = new Waypoint(data.lat,data.lng,data.alt);
             eachWaypoint.addAction(new WaypointAction(WaypointActionType.values()[data.act], data.actparam));
             mwaypointList.add(eachWaypoint);
         }

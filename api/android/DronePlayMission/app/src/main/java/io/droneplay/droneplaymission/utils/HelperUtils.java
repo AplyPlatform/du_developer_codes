@@ -34,6 +34,7 @@ import java.util.List;
 
 import io.droneplay.droneplaymission.model.FlightRecordItem;
 import io.droneplay.droneplaymission.R;
+import io.droneplay.droneplaymission.model.WaypointData;
 
 public class HelperUtils {
     private static HelperUtils uniqueInstance;
@@ -73,288 +74,6 @@ public class HelperUtils {
 
         return prefs.getInt(registerKey, 0);
     }
-/*
-    public static boolean isExistMission(String buttonid) {
-        String path = Environment.getExternalStorageDirectory().getAbsolutePath()  + File.separator + "/DronePlay/AppData" + File.separator;
-        File dir = new File(path);
-        if (!dir.exists()) {
-            return false;
-        }
-
-        path += "missions_" + buttonid;
-        File data = new File(path);
-        return data.exists();
-    }
-
-    public static void deleteMissionsFromFile(String buttonid) {
-        String path = Environment.getExternalStorageDirectory().getAbsolutePath()  + File.separator + "/DronePlay/AppData" + File.separator;
-        File dir = new File(path);
-        if (!dir.exists()) {
-            return;
-        }
-        path += "missions_" + buttonid;
-        File data = new File(path);
-        data.delete();
-    }
-
-    public static String saveMissionsToFile(String buttonid, List<WaypointData> listData) throws IOException {
-        String path = Environment.getExternalStorageDirectory().getAbsolutePath() + File.separator + "/DronePlay/AppData" + File.separator;
-        File dir = new File(path);
-        if (!dir.exists()) {
-            dir.mkdirs();
-        }
-        path += "missions_" + buttonid;
-
-        File data = new File(path);
-        if(!data.exists()) {
-            data.createNewFile();
-            if(data.exists() == false) return "";
-        }
-
-        OutputStream outputStream = null;
-        Gson gson = new GsonBuilder().enableComplexMapKeySerialization().setPrettyPrinting()
-                .create();
-        try {
-            outputStream = new FileOutputStream(data);
-            BufferedWriter bufferedWriter;
-            if (android.os.Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT) {
-                bufferedWriter = new BufferedWriter(new OutputStreamWriter(outputStream,
-                        StandardCharsets.UTF_8));
-            } else {
-                bufferedWriter = new BufferedWriter(new OutputStreamWriter(outputStream, "UTF-8"));
-            }
-
-            Type type = new TypeToken<ArrayList<WaypointData>>() { }.getType();
-            gson.toJson(listData, type, bufferedWriter);
-            bufferedWriter.close();
-
-        } catch (FileNotFoundException e) {
-            e.printStackTrace();
-
-        } catch (IOException e) {
-            e.printStackTrace();
-
-        } finally {
-            if (outputStream != null) {
-                try {
-                    outputStream.flush();
-                    outputStream.close();
-                } catch (IOException e) {
-
-                }
-            }
-        }
-
-        return path;
-    }
-
-    public static List<WaypointData> loadMissionsFromFile(String buttonid) {
-        String path = Environment.getExternalStorageDirectory().getAbsolutePath()  + File.separator + "/DronePlay/AppData" + File.separator;
-        path += "missions_" + buttonid;
-
-        File data = new File(path);
-        if(!data.exists()) {
-            return new ArrayList<WaypointData>();
-        }
-
-        List<WaypointData> jsonData = new ArrayList<WaypointData>();
-
-        InputStream inputStream;
-        Gson gson = new GsonBuilder().enableComplexMapKeySerialization().setPrettyPrinting()
-                .create();
-        try {
-            inputStream = new FileInputStream(data);
-            InputStreamReader streamReader;
-            if (android.os.Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT) {
-                streamReader = new InputStreamReader(inputStream,
-                        StandardCharsets.UTF_8);
-            } else {
-                streamReader = new InputStreamReader(inputStream, "UTF-8");
-            }
-
-            Type type = new TypeToken<ArrayList<WaypointData>>() { }.getType();
-            jsonData = gson.fromJson(streamReader, type);
-            streamReader.close();
-
-        } catch (FileNotFoundException e) {
-        } catch (IOException e) {
-        } finally {
-            return jsonData;
-        }
-    }
-
-    public static List<WaypointData> loadMissionFromFile(String name) {
-        String path = Environment.getExternalStorageDirectory().getAbsolutePath()  + File.separator + "/DronePlay/AppData" + File.separator;
-        path += "missions_" + buttonid;
-
-        File data = new File(path);
-        if(!data.exists()) {
-            return new ArrayList<WaypointData>();
-        }
-
-        List<WaypointData> jsonData = new ArrayList<WaypointData>();
-
-        InputStream inputStream;
-        Gson gson = new GsonBuilder().enableComplexMapKeySerialization().setPrettyPrinting()
-                .create();
-        try {
-            inputStream = new FileInputStream(data);
-            InputStreamReader streamReader;
-            if (android.os.Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT) {
-                streamReader = new InputStreamReader(inputStream,
-                        StandardCharsets.UTF_8);
-            } else {
-                streamReader = new InputStreamReader(inputStream, "UTF-8");
-            }
-
-            Type type = new TypeToken<ArrayList<WaypointData>>() { }.getType();
-            jsonData = gson.fromJson(streamReader, type);
-            streamReader.close();
-
-        } catch (FileNotFoundException e) {
-        } catch (IOException e) {
-        } finally {
-            return jsonData;
-        }
-    }
-
-    public static ArrayList<MainListItem> loadButtonsFromFile() {
-        String path = Environment.getExternalStorageDirectory().getAbsolutePath()  + File.separator + "/DronePlay/AppData" + File.separator;
-        path += "buttons";
-
-        File data = new File(path);
-        if(!data.exists()) {
-            return null;
-        }
-
-        ArrayList<MainListItem> jsonData = null;
-
-        InputStream inputStream = null;
-        Gson gson = new GsonBuilder().enableComplexMapKeySerialization().setPrettyPrinting()
-                .create();
-        try {
-            inputStream = new FileInputStream(data);
-            InputStreamReader streamReader;
-            if (android.os.Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT) {
-                streamReader = new InputStreamReader(inputStream,
-                        StandardCharsets.UTF_8);
-            } else {
-                streamReader = new InputStreamReader(inputStream, "UTF-8");
-            }
-
-            Type type = new TypeToken<ArrayList<MainListItem>>() { }.getType();
-            jsonData = gson.fromJson(streamReader, type);
-            streamReader.close();
-
-        } catch (FileNotFoundException e) {
-            e.printStackTrace();
-
-        } catch (IOException e) {
-            e.printStackTrace();
-
-        } finally {
-            if (inputStream != null) {
-                try {
-                    inputStream.close();
-                } catch (IOException e) {
-
-                }
-            }
-        }
-        return jsonData;
-    }
-
-    public static String saveButtonsToFile(ArrayList<MainListItem> listViewItemList) throws IOException {
-        String path = Environment.getExternalStorageDirectory().getAbsolutePath() + File.separator + "/DronePlay/AppData" + File.separator;
-        File dir = new File(path);
-        if (!dir.exists()) {
-            dir.mkdirs();
-        }
-        path += "buttons";
-
-        File data = new File(path);
-        if(!data.exists()) {
-            data.createNewFile();
-            if(data.exists() == false) return "";
-        }
-
-        OutputStream outputStream = null;
-        Gson gson = new GsonBuilder().enableComplexMapKeySerialization().setPrettyPrinting()
-                .create();
-        try {
-            outputStream = new FileOutputStream(data);
-            BufferedWriter bufferedWriter;
-            if (android.os.Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT) {
-                bufferedWriter = new BufferedWriter(new OutputStreamWriter(outputStream,
-                        StandardCharsets.UTF_8));
-            } else {
-                bufferedWriter = new BufferedWriter(new OutputStreamWriter(outputStream, "UTF-8"));
-            }
-
-            Type type = new TypeToken<ArrayList<MainListItem>>() { }.getType();
-            gson.toJson(listViewItemList, type, bufferedWriter);
-            bufferedWriter.close();
-
-        } catch (FileNotFoundException e) {
-            e.printStackTrace();
-
-        } catch (IOException e) {
-            e.printStackTrace();
-
-        } finally {
-            if (outputStream != null) {
-                try {
-                    outputStream.flush();
-                    outputStream.close();
-                } catch (IOException e) {
-
-                }
-            }
-        }
-
-        return path;
-    }
-
-    public static void saveButtons(ArrayList<MainListItem> listViewItemList) {
-
-        try {
-            HelperUtils.saveButtonsToFile(listViewItemList);
-        } catch (IOException e) {
-            //e.printStackTrace();
-        }
-    }
-
-    public static String generateButtonID(ArrayList<MainListItem> listViewItemList) {
-
-        boolean bTryAgain;
-        String newButtonID;
-
-        do {
-            bTryAgain = false;
-            newButtonID = newRandomString();
-            for (MainListItem item : listViewItemList) {
-                if (item.getId() == newButtonID) {
-                    bTryAgain = true;
-                    break;
-                }
-            }
-        }while(bTryAgain == true);
-
-
-        return newButtonID;
-    }
-
-    private static String newRandomString() {
-        SecureRandom rnd = new SecureRandom();
-
-        StringBuilder sb = new StringBuilder( 8 );
-        for( int i = 0; i < 8; i++ )
-            sb.append( AB.charAt( rnd.nextInt(AB.length()) ) );
-        return sb.toString();
-    }
-
-*/
-
 
     public String getMetadata(Context context, String name) {
         try {
@@ -535,22 +254,19 @@ public class HelperUtils {
         dapi.start();
     }
 
-
-
-    public void dromiListDeleteFromServer(String buttonId, Handler _handler)
-    {
+    public void deleteButtonsFromServer(String buttonid, Handler _handler) {
         String body = "";
 
         body += "{";
 
         body += "\"action\":";
-        body += ("\"dromi\",");
+        body += ("\"mission\",");
 
         body += "\"daction\":";
         body += ("\"delete\",");
 
-        body += "\"name\":";
-        body += ("\"" + buttonId + "\",");
+        body += "\"mname\":";
+        body += ("\"" + buttonid + "\",");
 
         body += "\"clientid\":";
         body += ("\"" + this.clientid + "\"");
@@ -562,22 +278,31 @@ public class HelperUtils {
         dapi.start();
     }
 
+    public void saveButtonsToServer(String buttonid, List<WaypointData> listData, Handler _handler) {
 
-
-    public void loadDromiListFromServer(Handler _handler)
-    {
         String body = "";
 
         body += "{";
 
         body += "\"action\":";
-        body += ("\"dromi\",");
+        body += ("\"mission\",");
 
         body += "\"daction\":";
-        body += ("\"list\",");
+        body += ("\"set\",");
+
+        body += "\"mname\":";
+        body += ("\"" + buttonid + "\",");
 
         body += "\"clientid\":";
-        body += ("\"" + this.clientid + "\"");
+        body += ("\"" + this.clientid + "\",");
+
+
+        body += "\"missiondata\":";
+
+        Type listType = new TypeToken<List<WaypointData>>() {}.getType();
+        Gson gson = new Gson();
+        String jsonString = gson.toJson(listData, listType);
+        body += jsonString;
 
         body += "}";
 
@@ -586,30 +311,7 @@ public class HelperUtils {
         dapi.start();
     }
 
-    public void loadPositionsFromServer(String buttonID, Handler _handler)
-    {
-        String body = "";
 
-        body += "{";
-
-        body += "\"action\":";
-        body += ("\"dromi\",");
-
-        body += "\"daction\":";
-        body += ("\"get\",");
-
-        body += "\"name\":";
-        body += ("\"" + buttonID + "\",");
-
-        body += ",\"clientid\":";
-        body += ("\"" + this.clientid + "\"");
-
-        body += "}";
-
-        DronePlayAPISupport dapi = new DronePlayAPISupport();
-        dapi.setAction(this.dronePlayToken, body, _handler);
-        dapi.start();
-    }
 
     public void loadButtonsFromServer(Handler _handler)
     {
@@ -669,7 +371,7 @@ public class HelperUtils {
         void onMarkerDataInputClick(String markerName, int nHow, int altitude, int act, int actParam, int speed) ;
     }
 
-    public void showMarkerDataInputDialog(final Context c, final String markerName, final int altitude, final markerDataInputClickListener listener) {
+    public void showMarkerDataInputDialog(final Context c, final String markerName, final int altitude, final int act, final int actParam, final int speed, final markerDataInputClickListener listener) {
         LayoutInflater layoutInflaterAndroid = LayoutInflater.from(c);
         View mView = layoutInflaterAndroid.inflate(R.layout.layout_marker_datainput, null);
         AlertDialog.Builder alertDialogBuilderUserInput = new AlertDialog.Builder(c);
@@ -696,6 +398,12 @@ public class HelperUtils {
         final EditText speedEdt = mView.findViewById(R.id.speed);
         final EditText actParamEdt = mView.findViewById(R.id.actparam);
 
+        speedEdt.setText(String.valueOf(speed));
+        actParamEdt.setText(String.valueOf(actParam));
+        altitudeEdt.setText(String.valueOf(altitude));
+        spinner.setSelection(act);
+        final AlertDialog alertDialogAndroid = alertDialogBuilderUserInput.create();
+
         btnModify.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
@@ -710,6 +418,7 @@ public class HelperUtils {
                 int speed = Integer.parseInt(speedEdt.getText().toString());
 
                 listener.onMarkerDataInputClick(markerName, 1, altitude, act, actParam, speed);
+                alertDialogAndroid.cancel();
             }
         });
 
@@ -718,15 +427,14 @@ public class HelperUtils {
             @Override
             public void onClick(View view) {
                 listener.onMarkerDataInputClick(markerName, 0, -1, -1, -1, -1);
+                alertDialogAndroid.cancel();
             }
         });
 
-
-        altitudeEdt.setText(String.valueOf(altitude));
         alertDialogBuilderUserInput
                 .setCancelable(true);
 
-        AlertDialog alertDialogAndroid = alertDialogBuilderUserInput.create();
+
         alertDialogAndroid.show();
     }
 

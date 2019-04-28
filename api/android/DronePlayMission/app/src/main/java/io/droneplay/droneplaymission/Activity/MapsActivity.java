@@ -1,17 +1,22 @@
 package io.droneplay.droneplaymission.Activity;
 
 
+import android.annotation.SuppressLint;
+import android.app.ProgressDialog;
 import android.content.Context;
 import android.content.Intent;
 import android.location.Location;
 import android.location.LocationManager;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Message;
 import android.support.annotation.NonNull;
 import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
 import android.view.View;
 import android.widget.Button;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import com.mapbox.mapboxsdk.annotations.Icon;
 import com.mapbox.mapboxsdk.annotations.IconFactory;
@@ -19,11 +24,13 @@ import com.mapbox.mapboxsdk.annotations.Marker;
 import com.mapbox.mapboxsdk.annotations.MarkerOptions;
 import com.mapbox.mapboxsdk.camera.CameraPosition;
 import com.mapbox.mapboxsdk.camera.CameraUpdateFactory;
-import com.mapbox.mapboxsdk.constants.Style;
 import com.mapbox.mapboxsdk.geometry.LatLng;
 import com.mapbox.mapboxsdk.maps.MapView;
 import com.mapbox.mapboxsdk.maps.MapboxMap;
 import com.mapbox.mapboxsdk.maps.OnMapReadyCallback;
+
+import org.json.JSONException;
+import org.json.JSONObject;
 
 import java.util.List;
 import java.util.Map;
@@ -31,6 +38,7 @@ import java.util.concurrent.ConcurrentHashMap;
 
 import dji.common.mission.waypoint.Waypoint;
 import dji.common.mission.waypoint.WaypointMission;
+import io.droneplay.droneplaymission.model.WaypointData;
 import io.droneplay.droneplaymission.utils.HelperUtils;
 import io.droneplay.droneplaymission.R;
 import io.droneplay.droneplaymission.utils.WaypointManager;
@@ -54,11 +62,13 @@ public class MapsActivity extends AppCompatActivity implements HelperUtils.marke
 
     private final Map<String, MarkerOptions> mMarkers = new ConcurrentHashMap<String, MarkerOptions>();
 
-    private int markerid = 0;
-
     private Context mContext;
 
     private int mapKind = 0;
+    private int markerIndex = 0;
+
+
+    private static ProgressDialog spinner = null;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -76,6 +86,10 @@ public class MapsActivity extends AppCompatActivity implements HelperUtils.marke
         manager = WaypointManager.getInstance();
 
         getSupportActionBar().hide();
+
+
+        spinner = new ProgressDialog(this);
+        spinner.setCancelable(false);
 
         mMapView.getMapAsync(new OnMapReadyCallback() {
             @Override
@@ -104,8 +118,9 @@ public class MapsActivity extends AppCompatActivity implements HelperUtils.marke
                 saveButton.setOnClickListener(new View.OnClickListener() {
                     @Override
                     public void onClick(View view) {
+                        showLoader();
                         HelperUtils.getInstance().saveMapStyle(mContext, mapKind);
-                        //manager.saveMissionToFile(mContext, buttonID);
+                        manager.saveMissionToServer(mContext, buttonID, saveHandler);
                     }
                 });
 
@@ -131,7 +146,8 @@ public class MapsActivity extends AppCompatActivity implements HelperUtils.marke
                         Log.d(TAG, "onMarkerClick");
 
                         String strTitle = marker.getTitle();
-                        modifyMarkerFromClickPoint(strTitle, manager.getAlt(strTitle));
+                        WaypointData d = manager.getData(strTitle);
+                        modifyMarkerFromClickPoint(strTitle, (int) d.alt, d.act, d.actparam, d.speed);
                         return false;
                     }
                 });
@@ -139,6 +155,66 @@ public class MapsActivity extends AppCompatActivity implements HelperUtils.marke
         });
     }
 
+
+    @SuppressLint("HandlerLeak")
+    private final Handler saveHandler = new Handler() {
+        @Override
+        public void handleMessage(Message message) {
+
+            hideLoader();
+            switch (message.what) {
+                case R.id.req_succeeded:
+
+                    String resultContent = (String) message.obj;
+                    try {
+                        JSONObject json = new JSONObject(resultContent);
+                        String result = (String) json.get("result");
+                        if (result != null && result.equalsIgnoreCase("success")) {
+                            showToast("Successfully, saved.");
+                        }
+                    } catch (JSONException e) {
+                        e.printStackTrace();
+                        showToast("Failed - "  + e.getMessage());
+                    }
+
+                    return;
+                case R.id.req_failed:
+                    showToast("Failed to save");
+                    break;
+            }
+        }
+    };
+
+
+    private void showToast(final String toastMsg) {
+        runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                Toast.makeText(getApplicationContext(), toastMsg, Toast.LENGTH_LONG).show();
+
+            }
+        });
+    }
+
+
+
+    private void showLoader() {
+        runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                spinner.show();
+            }
+        });
+    }
+
+    private void hideLoader() {
+        runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                spinner.hide();
+            }
+        });
+    }
 
     private void changeMapStyle() {
 
@@ -259,18 +335,18 @@ public class MapsActivity extends AppCompatActivity implements HelperUtils.marke
         mMarkers.clear();
         textView.setText("");
 
+        markerIndex = 0;
         for (Waypoint pt : mList) {
             LatLng ltlng = new LatLng(pt.coordinate.getLatitude(), pt.coordinate.getLongitude());
             addMarkerToMap(ltlng);
             dockdo = ltlng;
-            markerid++;
         }
 
         return dockdo;
     }
 
-    private void modifyMarkerFromClickPoint(String markerName, int altitude) {
-        HelperUtils.getInstance().showMarkerDataInputDialog(mContext, markerName, altitude, this);
+    private void modifyMarkerFromClickPoint(String markerName, int altitude, int act, int actParam, int speed) {
+        HelperUtils.getInstance().showMarkerDataInputDialog(this, markerName, altitude, act, actParam, speed, this);
     }
 
     private void modifyMarker(String markerName, int altitude, int act, int actParam, int speed) {
@@ -332,7 +408,7 @@ public class MapsActivity extends AppCompatActivity implements HelperUtils.marke
     }
 
     private String addMarkerToMap(LatLng latLng) {
-        String markerName = markerid + "";
+        String markerName = "mid-" + markerIndex;
         IconFactory iconFactory = IconFactory.getInstance(mContext);
         Icon icon = iconFactory.fromResource(R.mipmap.mission_flag);
         MarkerOptions nMarker = new MarkerOptions().position(latLng)
@@ -344,7 +420,7 @@ public class MapsActivity extends AppCompatActivity implements HelperUtils.marke
         mMap.addMarker(nMarker);
         CameraPosition pos = mMap.getCameraPosition();
         mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(latLng, pos.zoom));
-        markerid++;
+        markerIndex++;
 
         return markerName;
     }
