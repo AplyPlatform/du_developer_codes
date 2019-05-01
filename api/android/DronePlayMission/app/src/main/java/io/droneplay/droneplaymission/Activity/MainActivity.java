@@ -103,9 +103,9 @@ public class MainActivity extends AppCompatActivity implements MainListAdapter.L
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
-        checkAndRequestPermissions();
-
         setContentView(R.layout.activity_main);
+
+        checkAndRequestPermissions();
 
         adapter = new MainListAdapter(this);
         listview = (ListView) findViewById(R.id.listviewMain);
@@ -520,5 +520,4 @@ public class MainActivity extends AppCompatActivity implements MainListAdapter.L
             txtView.setText(txtMon);
         }
     }
-
 }

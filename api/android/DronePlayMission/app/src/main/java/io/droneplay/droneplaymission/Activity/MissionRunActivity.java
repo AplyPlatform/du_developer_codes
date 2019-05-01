@@ -500,6 +500,11 @@ public class MissionRunActivity extends FragmentActivity {
 
 
     private void sendDataToServer(int currentAction) {
+        if (Double.isNaN(currentLatitude)
+                || Double.isNaN(currentLongitude)
+                || Float.isNaN(currentAltitude)) return;
+
+        if (checkGpsCoordination(currentLatitude, currentLongitude) == false) return;
 
         FlightRecordItem item = new FlightRecordItem();
         item.act = currentAction;
