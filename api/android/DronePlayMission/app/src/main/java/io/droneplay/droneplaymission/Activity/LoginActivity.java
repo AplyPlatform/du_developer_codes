@@ -1,52 +1,43 @@
 package io.droneplay.droneplaymission.Activity;
 
-import android.annotation.SuppressLint;
 import android.app.ProgressDialog;
+import android.content.Context;
 import android.content.Intent;
-import android.os.Handler;
+import android.graphics.Bitmap;
+import android.net.Uri;
+import android.os.Build;
 import android.os.Message;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.view.View;
+import android.view.ViewGroup;
+import android.webkit.CookieManager;
+import android.webkit.JavascriptInterface;
+import android.webkit.WebChromeClient;
+import android.webkit.WebResourceRequest;
+import android.webkit.WebSettings;
+import android.webkit.WebView;
+import android.webkit.WebViewClient;
+import android.widget.FrameLayout;
 import android.widget.Toast;
 
-import com.facebook.AccessToken;
-import com.facebook.CallbackManager;
-import com.facebook.FacebookCallback;
-import com.facebook.FacebookException;
-import com.facebook.login.LoginResult;
-import com.facebook.login.widget.LoginButton;
-import com.google.android.gms.auth.api.signin.GoogleSignIn;
-import com.google.android.gms.auth.api.signin.GoogleSignInAccount;
-import com.google.android.gms.auth.api.signin.GoogleSignInClient;
-import com.google.android.gms.auth.api.signin.GoogleSignInOptions;
-import com.google.android.gms.common.SignInButton;
-import com.google.android.gms.common.api.ApiException;
-import com.google.android.gms.tasks.Task;
-
-import org.json.JSONException;
-import org.json.JSONObject;
-
-import io.droneplay.droneplaymission.utils.HelperUtils;
 import io.droneplay.droneplaymission.R;
+import io.droneplay.droneplaymission.utils.HelperUtils;
 
 
 public class LoginActivity extends AppCompatActivity {
 
-    private CallbackManager callbackManager;
-
     private static ProgressDialog spinner = null;
-
-    private int RC_SIGN_IN = 1001; //GOOGLE LOGIN
-    private int RC_LOG_IN = 1002; //FACEBOOK LOGIN
-
-    private GoogleSignInClient mGoogleSignInClient;
+    private WebView webView;
+    private Context mContext;
+    public static final String USER_AGENT = "Mozilla/5.0 (Linux; Android 4.1.1; Galaxy Nexus Build/JRO03C) AppleWebKit/535.19 (KHTML, like Gecko) Chrome/18.0.1025.166 Mobile Safari/535.19";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_login);
 
+        mContext = getApplicationContext();
         UIInit();
     }
 
@@ -54,12 +45,6 @@ public class LoginActivity extends AppCompatActivity {
     @Override
     public void onResume() {
         super.onResume();  // Always call the superclass method first
-
-        AccessToken token = AccessToken.getCurrentAccessToken();
-        if (token != null) {
-            getEmail("facebook", token.getToken());
-            return;
-        }
 
     }
 
@@ -82,123 +67,82 @@ public class LoginActivity extends AppCompatActivity {
     }
 
     private void UIInit() {
-        callbackManager = CallbackManager.Factory.create();
-
-        LoginButton loginButton = findViewById(R.id.login_button);
-        loginButton.setReadPermissions("email");
-        // Callback registration
-        loginButton.registerCallback(callbackManager, new FacebookCallback<LoginResult>() {
-            @Override
-            public void onSuccess(LoginResult loginResult) {
-                getEmail("facebook", loginResult.getAccessToken().getToken());
-            }
-
-            @Override
-            public void onCancel() {
-                // App code
-            }
-
-            @Override
-            public void onError(FacebookException exception) {
-                // App code
-            }
-        });
-
-        GoogleSignInOptions gso = new GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
-                .requestIdToken(getString(R.string.default_web_client_id))
-                .requestEmail()
-                .build();
-        mGoogleSignInClient = GoogleSignIn.getClient(this, gso);
-
-        SignInButton siginButton = findViewById(R.id.sign_in_button);
-        siginButton.setSize(SignInButton.SIZE_STANDARD);
-        // Callback registration
-        siginButton.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                Intent signInIntent = mGoogleSignInClient.getSignInIntent();
-                LoginActivity.this.startActivityForResult(signInIntent, RC_SIGN_IN);
-            }
-        });
-
         spinner = new ProgressDialog(this);
         spinner.setCancelable(false);
 
-    }
+        webView = (WebView) findViewById(R.id.webviewLogin);
+        WebSettings webSettings = webView.getSettings();
+        webSettings.setJavaScriptEnabled(true);
+        webSettings.setLoadWithOverviewMode(true);
+        webSettings.setAppCacheEnabled(true);
+//        webSettings.setJavaScriptCanOpenWindowsAutomatically(true);
+//        webSettings.setSupportMultipleWindows(true);
 
-    private void handleSignInResult(Task<GoogleSignInAccount> completedTask) {
-        try {
-            GoogleSignInAccount account = completedTask.getResult(ApiException.class);
-            getEmail("google", account.getIdToken());
-        } catch (ApiException e) {
-            showToast("Login failed - " + e.getMessage());
+        if (android.os.Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+            webSettings.setMixedContentMode(WebSettings.MIXED_CONTENT_ALWAYS_ALLOW);
+            CookieManager cookieManager = CookieManager.getInstance();
+            cookieManager.setAcceptCookie(true);
+            cookieManager.setAcceptThirdPartyCookies(webView, true);
+
         }
+
+        webView.addJavascriptInterface(new WebAppInterface(this), "Android");
+        webView.setWebViewClient(new MyCustomWebViewClient());
+
+
+        webSettings.setUserAgentString(USER_AGENT);
+
+        webView.loadUrl("https://dev.droneplay.io/center/index.html?fromapp=yes");
     }
 
-    @Override
-    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
 
-        if (requestCode == RC_SIGN_IN) {
-            // The Task returned from this call is always completed, no need to attach
-            // a listener.
-            Task<GoogleSignInAccount> task = GoogleSignIn.getSignedInAccountFromIntent(data);
-            handleSignInResult(task);
-        }
-        else {
-            callbackManager.onActivityResult(requestCode, resultCode, data);
-        }
-        super.onActivityResult(requestCode, resultCode, data);
-    }
-
-    private void getEmail(String serviceKind, String token) {
-        showLoader();
-        HelperUtils.getInstance().getDronePlayToken(token, serviceKind, requestLoginHandler);
-    }
-
-    @SuppressLint("HandlerLeak")
-    private final Handler requestLoginHandler = new Handler() {
+    private class MyCustomWebViewClient extends WebViewClient {
         @Override
-        public void handleMessage(Message message) {
+        public void onPageStarted(WebView view, String url, Bitmap favicon) {
+            super.onPageStarted(view, url, favicon);
+            showLoader();
+        }
+
+        @Override
+        public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
+            view.loadUrl(request.getUrl().toString());
+            return super.shouldOverrideUrlLoading(view, request);
+        }
+
+        @Override
+        public void onPageFinished(WebView view, String url) {
+            super.onPageFinished(view, url);
 
             hideLoader();
 
-            switch (message.what) {
-                case R.id.req_succeeded:
-
-                    String resultContent = (String) message.obj;
-                    try {
-                        JSONObject json = new JSONObject(resultContent);
-                        String result = (String) json.get("result");
-                        if ("success".equalsIgnoreCase(result)) {
-                            String dronePlayToken = (String) json.get("token");
-                            String emailid = (String) json.get("emailid");
-                            HelperUtils.getInstance().dronePlayToken = dronePlayToken;
-                            HelperUtils.getInstance().clientid = emailid;
-                            Intent intent = new Intent(LoginActivity.this, MainActivity.class);
-                            startActivity(intent);
-                            finish();
-                        }
-                        else {
-                            String fid = (String) json.get("fid");
-                            HelperUtils.getInstance().fid = fid;
-                            Intent intent = new Intent(LoginActivity.this, RegisterActivity.class);
-                            startActivity(intent);
-                        }
-                    } catch (JSONException e) {
-                        e.printStackTrace();
-                        showToast("Failed - "  + e.getMessage());
-                    }
-
-                    return;
-                case R.id.req_failed:
-                    showToast("Login Failed");
-                    break;
+            if (url.contains("https://accounts.google.com/signin/oauth/consent")) {
+                if (webView != null) {
+                    webView.loadUrl("https://dev.droneplay.io/center/index.html?fromapp=yes");
+                    showToast("확인되었습니다, 구글로 다시 로그인 해 주세요!");
+                }
             }
         }
-    };
+    }
 
+    public class WebAppInterface {
+        Context mContext;
 
+        /** Instantiate the interface and set the context */
+        WebAppInterface(Context c) {
+            mContext = c;
+        }
 
+        /** Show a toast from the web page */
+        @JavascriptInterface
+        public void setToken(String token, String email) {
+            HelperUtils.getInstance().clientid = email;
+            HelperUtils.getInstance().dronePlayToken = token;
+            Intent intent = new Intent(LoginActivity.this, MainActivity.class);
+            startActivity(intent);
+            finish();
+        }
+
+    }
 
     private void showToast(final String toastMsg) {
         runOnUiThread(new Runnable() {

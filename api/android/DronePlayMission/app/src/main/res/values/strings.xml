@@ -7,9 +7,6 @@
     <string name="sdk_registration_success_message">SDK Registered Successfully</string>
     <string name="sdk_registration_doing_message">Registering, pls wait...</string>
     <string name="title_activity_title_input_dialog">TitleInputDialogActivity</string>
-    <string name="facebook_app_id">570867566598427</string>
-    <string name="fb_login_protocol_scheme">fb570867566598427</string>
-    <string name="default_web_client_id">796696970892-p16dtq9oq2oks814lu661hreampk6kjn.apps.googleusercontent.com</string>
     <string name="title_activity_login">Sign in</string>
     <!-- Strings related to login -->
     <string name="prompt_email">Email</string>

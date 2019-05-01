@@ -6,38 +6,9 @@
     android:background="#777"
     tools:context=".Activity.LoginActivity">
 
-    <LinearLayout
-        android:orientation="vertical"
-        android:gravity="center_horizontal|center_vertical"
+
+    <WebView
+        android:id="@+id/webviewLogin"
         android:layout_width="match_parent"
-        android:layout_height="match_parent">
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:textColor="#fff"
-            android:textSize="50dp"
-            android:textStyle="bold"
-            android:layout_marginBottom="30dp"
-            android:text="DROMI"/>
-    <com.facebook.login.widget.LoginButton
-        android:layout_centerHorizontal="true"
-        android:layout_centerVertical="true"
-        android:id="@+id/login_button"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="30dp"
-        android:layout_marginBottom="30dp" />
-
-
-    <com.google.android.gms.common.SignInButton
-        android:layout_centerHorizontal="true"
-        android:layout_centerVertical="true"
-        android:id="@+id/sign_in_button"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="30dp"
-        android:layout_marginBottom="30dp" />
-
-    </LinearLayout>
-
+        android:layout_height="match_parent"/>
 </android.support.constraint.ConstraintLayout>
