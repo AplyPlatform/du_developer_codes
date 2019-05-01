@@ -91,6 +91,10 @@ public class MissionRunActivity extends FragmentActivity {
 
     private boolean bWaypointExecuted = false;
 
+    private int allMissionCount = 0;
+    private int finPointCount = 0;
+    private int finMissionCount = 0;
+
     private Timer timer = new Timer();
     private Timer dataTimer = new Timer();
 
@@ -157,14 +161,13 @@ public class MissionRunActivity extends FragmentActivity {
         mMapView = (MapView) findViewById(R.id.map);
         mMapView.onCreate(savedInstanceState);
 
+        finPointCount = 0;
+        allMissionCount = 0;
+        finMissionCount = 0;
+
         initUI();
 
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
-
-        IntentFilter filter = new IntentFilter();
-        filter.addAction(DronePlayMissionApplication.FLAG_CONNECTION_CHANGE);
-        registerReceiver(mReceiver, filter);
-
     }
 
 
@@ -258,11 +261,15 @@ public class MissionRunActivity extends FragmentActivity {
                 LatLng latLng = loadMissionsToMap();
                 if (latLng != null)
                     mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(latLng, 20));
+                else {
+                    LatLng ltlng = new LatLng(37,123, 127.123);
+                    mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(latLng, 20));
+                }
 
                 stopButton.setOnClickListener(new View.OnClickListener() {
                     @Override
                     public void onClick(View view) {
-
+                        stopButton.setEnabled(false);
                         stopMission();
 
                         if (flightController != null) {
@@ -274,6 +281,8 @@ public class MissionRunActivity extends FragmentActivity {
                         stopRecord();
                         tearDownListener();
                         HelperUtils.getInstance().uploadFlightRecord(buttonID, mFlightRecord, uploadHandler);
+
+                        ToastUtils.setResultToToast("기록이 중지 되었습니다.");
                     }
                 });
             }
@@ -281,12 +290,12 @@ public class MissionRunActivity extends FragmentActivity {
     }
 
     protected void changeDescription(final String newDescription) {
-        new Runnable() {
+        runOnUiThread(new Runnable(){
             @Override
             public void run() {
                 recordingTime.setText(newDescription);
             }
-        };
+        });
     }
 
 
@@ -417,6 +426,8 @@ public class MissionRunActivity extends FragmentActivity {
 
         mMarkers.put(markerName, nMarker);
         if(mMap != null) {
+            double curZoom = mMap.getCameraPosition().zoom;
+            mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(latLng, curZoom));
             return mMap.addMarker(nMarker);
         }
 
@@ -458,7 +469,7 @@ public class MissionRunActivity extends FragmentActivity {
         runOnUiThread(new Runnable(){
             @Override
             public void run() {
-                textView.setText("H:" + String.format("%.3f", currentAltitude)
+                textView.setText(finMissionCount + "/" + allMissionCount + "/H:" + String.format("%.3f", currentAltitude)
                         + "/La:" + String.format("%.3f", currentLatitude)
                         + "/Ln:" + String.format("%.3f", currentLongitude)
                         + (latestBatteryState == null ? "" : ("/Bt:" + String.valueOf(latestBatteryState.getChargeRemainingInPercent())) + "%"));
@@ -497,7 +508,11 @@ public class MissionRunActivity extends FragmentActivity {
         item.alt = currentAltitude;
         item.lat = String.valueOf(currentLatitude);
         item.lng = String.valueOf(currentLongitude);
-        item.etc.battery = String.valueOf(latestBatteryState.getChargeRemainingInPercent());
+        if (latestBatteryState != null)
+            item.etc.battery = String.valueOf(latestBatteryState.getChargeRemainingInPercent());
+        else
+            item.etc.battery = "-";
+
         item.etc.marked = bPositionTouched ? "true" : "false";
         item.dsec = String.valueOf(timeCounter);
         item.dtimestamp = HelperUtils.getInstance().getTimeStamp();
@@ -514,6 +529,11 @@ public class MissionRunActivity extends FragmentActivity {
                 HelperUtils.getInstance().sendMyPosition(item);
 
                 currentDroneMarker = addMarkerToMap(latlng, R.mipmap.drone);
+
+                finPointCount++;
+
+                TextView textCount = findViewById(R.id.pointCount);
+                textCount.setText(finPointCount + " recorded.");
             }
         });
 
@@ -652,6 +672,9 @@ public class MissionRunActivity extends FragmentActivity {
                                 : waypointMissionExecutionEvent.getProgress().targetWaypointIndex));
 
                 updateWaypointMissionState();
+
+                finMissionCount--;
+
             }
 
             @Override
@@ -804,6 +827,11 @@ public class MissionRunActivity extends FragmentActivity {
     public void onResume() {
         super.onResume();  // Always call the superclass method first
 
+
+        IntentFilter filter = new IntentFilter();
+        filter.addAction(DronePlayMissionApplication.FLAG_CONNECTION_CHANGE);
+        registerReceiver(mReceiver, filter);
+
         Intent i = getIntent();
         String param = i.getStringExtra(PARAM_BUTTON_ID);
         if (param != null && param.equalsIgnoreCase("NEW_MISSION")) {
@@ -822,6 +850,8 @@ public class MissionRunActivity extends FragmentActivity {
     @Override
     public void onPause() {
         super.onPause();  // Always call the superclass method first
+
+        unregisterReceiver(mReceiver);
 
         stopMission();
 
@@ -889,10 +919,12 @@ public class MissionRunActivity extends FragmentActivity {
 
         WaypointManager.getInstance().setMission(buttonID);
         WaypointMission mission = WaypointManager.getInstance().getWaypointMission();
+
+        finMissionCount = allMissionCount = mission.getWaypointCount();
+
         DJIError djiError = waypointMissionOperator.loadMission(mission);
         if (djiError != null) {
             showResultToast(djiError);
-            //finish();
         }
         else {
             uploadMission();

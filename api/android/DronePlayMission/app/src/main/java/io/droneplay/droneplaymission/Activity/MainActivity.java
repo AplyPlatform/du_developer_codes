@@ -23,6 +23,7 @@ import android.util.Log;
 import android.view.View;
 import android.widget.Button;
 import android.widget.ListView;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import com.google.gson.Gson;
@@ -94,18 +95,16 @@ public class MainActivity extends AppCompatActivity implements MainListAdapter.L
 
         @Override
         public void onConnectivityChange(boolean isConnected) {
-            runOnUiThread(new Runnable() {
-                @Override
-                public void run() {
-                    refreshSDKRelativeUI();
-                }
-            });
+
         }
     };
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+
+        checkAndRequestPermissions();
+
         setContentView(R.layout.activity_main);
 
         adapter = new MainListAdapter(this);
@@ -119,16 +118,22 @@ public class MainActivity extends AppCompatActivity implements MainListAdapter.L
 
         listview.setVisibility(View.INVISIBLE);
 
-        IntentFilter filter = new IntentFilter();
-        filter.addAction(DronePlayMissionApplication.FLAG_CONNECTION_CHANGE);
-        registerReceiver(mReceiver, filter);
-
         spinner = new ProgressDialog(this);
         spinner.setCancelable(false);
 
-        checkAndRequestPermissions();
+        showLoader();
+        Init();
     }
 
+
+    @Override
+    public void onResume() {
+        IntentFilter filter = new IntentFilter();
+        filter.addAction(DronePlayMissionApplication.FLAG_CONNECTION_CHANGE);
+        registerReceiver(mReceiver, filter);
+        Log.e(TAG, "onResume");
+        super.onResume();
+    }
 
     private void deleteButton(String buttonid) {
         removeButtonID = buttonid;
@@ -222,8 +227,15 @@ public class MainActivity extends AppCompatActivity implements MainListAdapter.L
 
     @Override
     protected void onDestroy() {
-        unregisterReceiver(mReceiver);
         super.onDestroy();
+    }
+
+
+
+    @Override
+    public void onPause() {
+        unregisterReceiver(mReceiver);
+        super.onPause();
     }
 
 
@@ -347,6 +359,7 @@ public class MainActivity extends AppCompatActivity implements MainListAdapter.L
 
     private void startSDKRegistration() {
 
+
         if (isRegistrationInProgress.compareAndSet(false, true)) {
             AsyncTask.execute(new Runnable() {
                 @Override
@@ -358,31 +371,23 @@ public class MainActivity extends AppCompatActivity implements MainListAdapter.L
                             if (djiError == DJISDKError.REGISTRATION_SUCCESS) {
                                 DJILog.e("App registration", DJISDKError.REGISTRATION_SUCCESS.getDescription());
                                 showToast("Register Success");
+                                DJISDKManager.getInstance().startConnectionToProduct();
+
                             } else {
                                 showToast( "Register sdk fails, check network is available");
                             }
-                            Log.v(TAG, djiError.getDescription());
-
-                            DJISDKManager.getInstance().startConnectionToProduct();
-
-                            showLoader();
-                            Init();
-                            isRegistrationInProgress.set(false);
                         }
 
                         @Override
                         public void onProductDisconnect() {
                             Log.d(TAG, "onProductDisconnect");
-                            showToast("Product Disconnected");
+                            showToast("Product is Disconnected");
 
                         }
                         @Override
                         public void onProductConnect(BaseProduct baseProduct) {
-                            isRegistrationInProgress.set(false);
                             Log.d(TAG, String.format("onProductConnect newProduct:%s", baseProduct));
-                            showToast("Product Connected");
-
-
+                            showToast("Product is Connected");
                         }
                         @Override
                         public void onComponentChange(BaseProduct.ComponentKey componentKey, BaseComponent oldComponent,
@@ -397,6 +402,7 @@ public class MainActivity extends AppCompatActivity implements MainListAdapter.L
                                             oldComponent,
                                             newComponent));
 
+                            showToast(newComponent + " Component is Changed.");
                         }
                     });
                 }
@@ -409,7 +415,6 @@ public class MainActivity extends AppCompatActivity implements MainListAdapter.L
         @Override
         public void onReceive(Context context, Intent intent) {
             refreshSDKRelativeUI();
-            checkAndRequestPermissions();
         }
     };
 
@@ -462,10 +467,6 @@ public class MainActivity extends AppCompatActivity implements MainListAdapter.L
                     missingPermission.toArray(new String[missingPermission.size()]),
                     REQUEST_PERMISSION_CODE);
         }
-        else {
-            startSDKRegistration();
-        }
-
     }
 
     /**
@@ -496,6 +497,8 @@ public class MainActivity extends AppCompatActivity implements MainListAdapter.L
 
     private void refreshSDKRelativeUI() {
         BaseProduct mProduct = DronePlayMissionApplication.getProductInstance();
+        TextView txtView = findViewById(R.id.txtProductname);
+        String txtMon = "";
 
         if (null != mProduct && mProduct.isConnected()) {
             Log.v(TAG, "refreshSDK: True");
@@ -503,30 +506,19 @@ public class MainActivity extends AppCompatActivity implements MainListAdapter.L
             String str = mProduct instanceof Aircraft ? "DJIAircraft" : "DJIHandHeld";
 
             if (null != mProduct.getModel()) {
-                showToast("Status: " + str + " connected / " + mProduct.getModel().getDisplayName());
+                txtMon = "Status: " + str + " connected / " + mProduct.getModel().getDisplayName();
             } else {
-                showToast("Status: " + str + " connected");
+                txtMon = "Status: " + str + " connected";
             }
+
+            txtView.setText(txtMon);
+            showToast(txtMon);
         } else {
             Log.v(TAG, "refreshSDK: False");
-            showToast("Failed to connect to product");
+            txtMon = "Failed to connect to product";
+            showToast(txtMon);
+            txtView.setText(txtMon);
         }
     }
-
-    @Override
-    protected void onNewIntent(Intent intent) {
-        super.onNewIntent(intent);
-        String action = intent.getAction();
-        if (UsbManager.ACTION_USB_ACCESSORY_ATTACHED.equals(action)) {
-            Intent attachedIntent = new Intent();
-            attachedIntent.setAction(DJISDKManager.USB_ACCESSORY_ATTACHED);
-            sendBroadcast(attachedIntent);
-
-            if (DJISDKManager.getInstance().hasSDKRegistered() == true) {
-                startSDKRegistration();
-            }
-        }
-    }
-
 
 }

@@ -5,6 +5,15 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical">
+    <TextView
+        android:padding="2dp"
+        android:id="@+id/txtProductname"
+        android:layout_width="match_parent"
+        android:textSize="15dp"
+        android:textAlignment="center"
+        android:textColor="#999"
+        android:layout_height="30dp" />
+
     <ListView
         android:layout_weight="1"
         android:background="#aaa"
