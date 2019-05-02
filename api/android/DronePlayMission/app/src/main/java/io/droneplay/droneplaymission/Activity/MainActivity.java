@@ -376,11 +376,13 @@ public class MainActivity extends AppCompatActivity implements MainListAdapter.L
                             if (djiError == DJISDKError.REGISTRATION_SUCCESS) {
                                 DJILog.e("App registration", DJISDKError.REGISTRATION_SUCCESS.getDescription());
                                 showToast("Register Success");
-                                DJISDKManager.getInstance().startConnectionToProduct();
+
 
                             } else {
                                 showToast( "Register sdk fails, check network is available");
                             }
+
+                            DJISDKManager.getInstance().startConnectionToProduct();
                         }
 
                         @Override

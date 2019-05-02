@@ -1,6 +1,5 @@
 package io.droneplay.droneplaymission.utils;
 
-import android.app.Activity;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.SharedPreferences;
@@ -11,7 +10,6 @@ import android.os.Looper;
 import android.preference.PreferenceManager;
 import android.support.annotation.Nullable;
 import android.support.v7.app.AlertDialog;
-import android.text.TextUtils;
 import android.util.Log;
 import android.view.Gravity;
 import android.view.LayoutInflater;
@@ -52,13 +50,9 @@ public class HelperUtils {
 
     }
 
-
     private static final String MY_MAP_STYLE = "my_map_style";
     public String dronePlayToken = "";
     public String clientid = "";
-
-    public String fid = "";
-
 
     public void saveMapStyle(Context context, int mapStyle) {
         SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(context);
@@ -90,82 +84,6 @@ public class HelperUtils {
         return null;
     }
 
-    public void processDronePlayRegister(String name, String email, String phonenumber, String captchaToken, Handler _handler) {
-
-        //
-        String body = "";
-
-        body += "{";
-
-        body += "\"action\":";
-        body += ("\"member\",");
-
-        body += "\"device\":";
-        body += ("\"android\",");
-
-        body += "\"daction\":";
-        body += ("\"register\",");
-
-        body += "\"socialid\":";
-        body += ("\"" + email + "\",");
-
-        body += "\"name\":";
-        body += ("\"" + name + "\",");
-
-        body += "\"phone_number\":";
-        body += ("\"" + phonenumber + "\",");
-
-        body += "\"captcha_token\":";
-        body += ("\"" + captchaToken + "\",");
-
-        body += "\"emailid\":";
-        body += ("\"" + this.fid + "\"");
-
-        body += "}";
-
-        DronePlayAPISupport dapi = new DronePlayAPISupport();
-        dapi.setAction(this.dronePlayToken, body, _handler);
-        dapi.start();
-    }
-
-    public void getDronePlayToken(String accessToken, String serviceKind, Handler _handler) {
-
-        //
-        String body = "";
-
-        body += "{";
-
-        body += "\"action\":";
-        body += ("\"member\",");
-
-        body += "\"daction\":";
-        body += ("\"login\",");
-
-        body += "\"token\":";
-        body += ("\"" + accessToken + "\",");
-
-        body += "\"kind\":";
-        body += ("\"" + serviceKind + "\"");
-
-        body += "}";
-
-        DronePlayAPISupport dapi = new DronePlayAPISupport();
-        dapi.setAction(this.dronePlayToken, body, _handler);
-        dapi.start();
-    }
-
-    public final static boolean isValidEmail(CharSequence target) {
-        if (TextUtils.isEmpty(target)) {
-            return false;
-        } else {
-            return android.util.Patterns.EMAIL_ADDRESS.matcher(target).matches();
-        }
-    }
-
-    public boolean validCellPhone(String number)
-    {
-        return android.util.Patterns.PHONE.matcher(number).matches();
-    }
 
     public String getCurrentLocalDateTimeStamp() {
         DateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd_HH-mm-ss");
@@ -347,14 +265,14 @@ public class HelperUtils {
         AlertDialog.Builder alertDialogBuilderUserInput = new AlertDialog.Builder(c);
         alertDialogBuilderUserInput.setView(mView);
 
-        final EditText userInputDialogEditText = (EditText) mView.findViewById(R.id.userInputDialog);
+        final EditText userInputDialogEditText = mView.findViewById(R.id.userInputDialog);
         alertDialogBuilderUserInput
                 .setCancelable(false)
                 .setPositiveButton("Make", new DialogInterface.OnClickListener() {
                     public void onClick(DialogInterface dialogBox, int id) {
 
                         listener.onTitileInputClick(userInputDialogEditText.getText().toString());
-                        dialogBox.cancel();
+                        dialogBox.dismiss();
                     }
                 })
 
@@ -363,7 +281,7 @@ public class HelperUtils {
                             public void onClick(DialogInterface dialogBox, int id) {
 
                                 listener.onTitileInputClick("");
-                                dialogBox.cancel();
+                                dialogBox.dismiss();
                             }
                         });
 
@@ -422,7 +340,7 @@ public class HelperUtils {
                 int speed = Integer.parseInt(speedEdt.getText().toString());
 
                 listener.onMarkerDataInputClick(markerName, 1, altitude, act, actParam, speed);
-                alertDialogAndroid.cancel();
+                alertDialogAndroid.dismiss();
             }
         });
 
@@ -431,7 +349,7 @@ public class HelperUtils {
             @Override
             public void onClick(View view) {
                 listener.onMarkerDataInputClick(markerName, 0, -1, -1, -1, -1);
-                alertDialogAndroid.cancel();
+                alertDialogAndroid.dismiss();
             }
         });
 

@@ -847,7 +847,6 @@ public class MissionRunActivity extends FragmentActivity {
     public void onResume() {
         super.onResume();  // Always call the superclass method first
 
-
         IntentFilter filter = new IntentFilter();
         filter.addAction(DronePlayMissionApplication.FLAG_CONNECTION_CHANGE);
         registerReceiver(mReceiver, filter);
