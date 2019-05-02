@@ -150,7 +150,7 @@ public class MainActivity extends AppCompatActivity implements MainListAdapter.L
                     return;
                 }
 
-                HelperUtils.getInstance().showTitleInputDialog(getApplicationContext(), MainActivity.this);
+                HelperUtils.getInstance().showTitleInputDialog(MainActivity.this, MainActivity.this);
             }
         });
 
