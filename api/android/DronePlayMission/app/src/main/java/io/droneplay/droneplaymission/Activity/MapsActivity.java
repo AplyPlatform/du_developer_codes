@@ -216,6 +216,10 @@ public class MapsActivity extends AppCompatActivity implements HelperUtils.marke
         });
     }
 
+
+
+
+
     private void changeMapStyle() {
 
         if (mMap == null) return;
@@ -281,7 +285,7 @@ public class MapsActivity extends AppCompatActivity implements HelperUtils.marke
     @Override
     public void onResume() {
         super.onResume();  // Always call the superclass method first
-        mMapView.onStart();
+        mMapView.onResume();
 
         Intent i = getIntent();
         buttonID = i.getStringExtra(MissionRunActivity.PARAM_BUTTON_ID);
@@ -291,8 +295,9 @@ public class MapsActivity extends AppCompatActivity implements HelperUtils.marke
     @Override
     public void onPause() {
         super.onPause();  // Always call the superclass method first
-        mMapView.onStart();
+        mMapView.onPause();
     }
+
 
     private Location getCurrentLocation() {
         LocationManager locationManager = (LocationManager) getSystemService(LOCATION_SERVICE);
@@ -390,7 +395,12 @@ public class MapsActivity extends AppCompatActivity implements HelperUtils.marke
     @Override
     protected void onDestroy() {
         super.onDestroy();
-        mMapView.onStart();
+        mMapView.onDestroy();
+
+        if (spinner != null) {
+            spinner.dismiss();
+            spinner = null;
+        }
     }
 
     private void showCurrentPos(LatLng latLng) {

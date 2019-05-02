@@ -59,6 +59,7 @@ public class HelperUtils {
 
     public String fid = "";
 
+
     public void saveMapStyle(Context context, int mapStyle) {
         SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(context);
         String registerKey = MY_MAP_STYLE;
@@ -353,7 +354,6 @@ public class HelperUtils {
                     public void onClick(DialogInterface dialogBox, int id) {
 
                         listener.onTitileInputClick(userInputDialogEditText.getText().toString());
-
                         dialogBox.cancel();
                     }
                 })
@@ -363,7 +363,6 @@ public class HelperUtils {
                             public void onClick(DialogInterface dialogBox, int id) {
 
                                 listener.onTitileInputClick("");
-
                                 dialogBox.cancel();
                             }
                         });

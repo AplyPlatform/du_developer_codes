@@ -60,6 +60,8 @@ public class WaypointManager {
 
     private ArrayList<WaypointData> loadMissions(String buttonID) {
 
+        if (buttonID == null || buttonID.equalsIgnoreCase("")) return null;
+
         for(MainListItem item : mainList) {
             if (item.name.equalsIgnoreCase(buttonID)) {
                 return item.mission;

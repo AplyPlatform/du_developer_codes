@@ -52,6 +52,7 @@ public class LoginActivity extends AppCompatActivity {
         runOnUiThread(new Runnable() {
             @Override
             public void run() {
+                if(spinner == null || spinner.isShowing()) return;
                 spinner.show();
             }
         });
@@ -61,6 +62,7 @@ public class LoginActivity extends AppCompatActivity {
         runOnUiThread(new Runnable() {
             @Override
             public void run() {
+                if(spinner == null || spinner.isShowing() == false) return;
                 spinner.hide();
             }
         });
@@ -124,6 +126,27 @@ public class LoginActivity extends AppCompatActivity {
 
         }
     }
+
+
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+
+        if (spinner != null) {
+            spinner.dismiss();
+            spinner = null;
+        }
+    }
+
+
+
+    @Override
+    public void onPause() {
+        super.onPause();
+
+    }
+
 
     public class WebAppInterface {
         Context mContext;

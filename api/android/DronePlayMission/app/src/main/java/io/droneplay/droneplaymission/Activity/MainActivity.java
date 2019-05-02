@@ -225,9 +225,15 @@ public class MainActivity extends AppCompatActivity implements MainListAdapter.L
     };
 
 
+
     @Override
     protected void onDestroy() {
         super.onDestroy();
+
+        if (spinner != null) {
+            spinner.dismiss();
+            spinner = null;
+        }
     }
 
 
@@ -278,7 +284,6 @@ public class MainActivity extends AppCompatActivity implements MainListAdapter.L
         }
 
         Intent intent = new Intent(MainActivity.this, MissionRunActivity.class);
-        intent.putExtra(MissionRunActivity.PARAM_BUTTON_ID, WaypointManager.getInstance().getMissionID());
         startActivity(intent);
     }
 
@@ -351,9 +356,9 @@ public class MainActivity extends AppCompatActivity implements MainListAdapter.L
             return;
         }
 
+        WaypointManager.getInstance().setMission(buttonTitle);
         Intent intent = new Intent(MainActivity.this, MissionRunActivity.class);
         intent.putExtra(MissionRunActivity.PARAM_BUTTON_ID, "NEW_MISSION");
-        intent.putExtra("title", buttonTitle);
         startActivity(intent);
     }
 

@@ -23,6 +23,7 @@ import android.view.WindowManager;
 import android.widget.Button;
 import android.widget.LinearLayout;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import com.mapbox.mapboxsdk.annotations.Icon;
 import com.mapbox.mapboxsdk.annotations.IconFactory;
@@ -287,6 +288,20 @@ public class MissionRunActivity extends FragmentActivity {
                 });
             }
         });
+    }
+
+
+    @Override
+    public void onLowMemory() {
+        super.onLowMemory();
+        mMapView.onLowMemory();
+    }
+
+
+    @Override
+    protected void onSaveInstanceState(Bundle outState) {
+        super.onSaveInstanceState(outState);
+        mMapView.onSaveInstanceState(outState);
     }
 
     protected void changeDescription(final String newDescription) {
@@ -839,18 +854,23 @@ public class MissionRunActivity extends FragmentActivity {
 
         Intent i = getIntent();
         String param = i.getStringExtra(PARAM_BUTTON_ID);
+        buttonID = manager.getInstance().getMissionID();
         if (param != null && param.equalsIgnoreCase("NEW_MISSION")) {
-            buttonID = i.getStringExtra("title");
             startNewMission();
         }
         else {
-            setUpListener();
-            setUpWaypointListener();
-            initPreviewer();
-            loadMission();
+            startWaypointMission();
         }
+
+        mMapView.onResume();
     }
 
+    private void startWaypointMission() {
+        setUpListener();
+        setUpWaypointListener();
+        initPreviewer();
+        loadMission();
+    }
 
     @Override
     public void onPause() {
@@ -873,6 +893,8 @@ public class MissionRunActivity extends FragmentActivity {
             HelperUtils.getInstance().uploadFlightRecord(buttonID, mFlightRecord, uploadHandler);
             bWaypointExecuted = false;
         }
+
+        mMapView.onPause();
     }
 
 
@@ -924,6 +946,11 @@ public class MissionRunActivity extends FragmentActivity {
 
         WaypointManager.getInstance().setMission(buttonID);
         WaypointMission mission = WaypointManager.getInstance().getWaypointMission();
+
+        if (mission == null) {
+            showToast("Failed to load mission.");
+            return;
+        }
 
         finMissionCount = allMissionCount = mission.getWaypointCount();
 
@@ -1005,6 +1032,7 @@ public class MissionRunActivity extends FragmentActivity {
     @Override
     protected void onDestroy() {
         DronePlayMissionApplication.getEventBus().unregister(mContext);
+        mMapView.onDestroy();
         super.onDestroy();
     }
 
@@ -1025,4 +1053,16 @@ public class MissionRunActivity extends FragmentActivity {
             });
         }
     }
+
+
+    private void showToast(final String toastMsg) {
+        runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                Toast.makeText(getApplicationContext(), toastMsg, Toast.LENGTH_LONG).show();
+
+            }
+        });
+    }
+
 }
