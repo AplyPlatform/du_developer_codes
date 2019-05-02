@@ -128,11 +128,11 @@ public class MainActivity extends AppCompatActivity implements MainListAdapter.L
 
     @Override
     public void onResume() {
+        super.onResume();
+
         IntentFilter filter = new IntentFilter();
         filter.addAction(DronePlayMissionApplication.FLAG_CONNECTION_CHANGE);
         registerReceiver(mReceiver, filter);
-        Log.e(TAG, "onResume");
-        super.onResume();
     }
 
     private void deleteButton(String buttonid) {
@@ -150,7 +150,7 @@ public class MainActivity extends AppCompatActivity implements MainListAdapter.L
                     return;
                 }
 
-                HelperUtils.getInstance().showTitleInputDialog(MainActivity.this, MainActivity.this);
+                HelperUtils.getInstance().showTitleInputDialog(getApplicationContext(), MainActivity.this);
             }
         });
 
@@ -234,8 +234,8 @@ public class MainActivity extends AppCompatActivity implements MainListAdapter.L
 
     @Override
     public void onPause() {
-        unregisterReceiver(mReceiver);
         super.onPause();
+        unregisterReceiver(mReceiver);
     }
 
 
@@ -347,7 +347,7 @@ public class MainActivity extends AppCompatActivity implements MainListAdapter.L
     @Override
     public void onTitileInputClick(String buttonTitle) {
         if (buttonTitle == null || buttonTitle.equalsIgnoreCase("")) {
-            finish();
+            showToast("Please, input a title.");
             return;
         }
 

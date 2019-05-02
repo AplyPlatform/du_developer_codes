@@ -263,7 +263,7 @@ public class MissionRunActivity extends FragmentActivity {
                     mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(latLng, 20));
                 else {
                     LatLng ltlng = new LatLng(37,123, 127.123);
-                    mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(latLng, 20));
+                    mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(ltlng, 20));
                 }
 
                 stopButton.setOnClickListener(new View.OnClickListener() {
@@ -376,8 +376,7 @@ public class MissionRunActivity extends FragmentActivity {
 
                     if (mCodecManager == null) {
 
-                        mCodecManager = new DJICodecManager(getApplicationContext(), holder, videoViewWidth,
-                                videoViewHeight);
+                        mCodecManager = new DJICodecManager(getApplicationContext(), holder, videoViewWidth, videoViewHeight);
 
                     }
 

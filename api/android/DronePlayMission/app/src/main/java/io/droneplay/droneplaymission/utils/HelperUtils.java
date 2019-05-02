@@ -351,6 +351,7 @@ public class HelperUtils {
                 .setCancelable(false)
                 .setPositiveButton("Make", new DialogInterface.OnClickListener() {
                     public void onClick(DialogInterface dialogBox, int id) {
+                        dialogBox.cancel();
                         listener.onTitileInputClick(userInputDialogEditText.getText().toString());
                     }
                 })
