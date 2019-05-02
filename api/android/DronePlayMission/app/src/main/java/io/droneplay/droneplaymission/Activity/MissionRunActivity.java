@@ -376,7 +376,8 @@ public class MissionRunActivity extends FragmentActivity {
 
                     if (mCodecManager == null) {
 
-                        mCodecManager = new DJICodecManager(getApplicationContext(), holder, videoViewWidth, videoViewHeight);
+                        mCodecManager = new DJICodecManager(getApplicationContext(), holder, videoViewWidth,
+                                videoViewHeight);
 
                     }
 

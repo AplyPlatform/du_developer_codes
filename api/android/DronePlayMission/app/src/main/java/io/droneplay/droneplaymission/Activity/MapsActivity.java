@@ -138,7 +138,7 @@ public class MapsActivity extends AppCompatActivity implements HelperUtils.marke
                         addMarker(4, point);
                     }
                 });
-                
+
 
                 mMap.setOnMarkerClickListener(new MapboxMap.OnMarkerClickListener() {
                     @Override

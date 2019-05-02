@@ -103,9 +103,9 @@ public class MainActivity extends AppCompatActivity implements MainListAdapter.L
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
-        setContentView(R.layout.activity_main);
-
         checkAndRequestPermissions();
+
+        setContentView(R.layout.activity_main);
 
         adapter = new MainListAdapter(this);
         listview = (ListView) findViewById(R.id.listviewMain);
@@ -261,8 +261,8 @@ public class MainActivity extends AppCompatActivity implements MainListAdapter.L
         BaseProduct mProduct = DronePlayMissionApplication.getProductInstance();
         if (mProduct == null || mProduct.isConnected() == false) {
             //if (DJISDKManager.getInstance().startConnectionToProduct() == false) {
-                showToast("Failed to connect to product");
-                return;
+            showToast("Failed to connect to product");
+            return;
             //}
         }
 
@@ -520,4 +520,5 @@ public class MainActivity extends AppCompatActivity implements MainListAdapter.L
             txtView.setText(txtMon);
         }
     }
+
 }
