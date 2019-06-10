@@ -9,7 +9,6 @@ import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.pm.PackageManager;
-import android.hardware.usb.UsbManager;
 import android.os.Build;
 import android.os.Handler;
 import android.os.Message;
@@ -108,7 +107,7 @@ public class MainActivity extends AppCompatActivity implements MainListAdapter.L
         setContentView(R.layout.activity_main);
 
         adapter = new MainListAdapter(this);
-        listview = (ListView) findViewById(R.id.listviewMain);
+        listview = findViewById(R.id.listviewMain);
         listview.setAdapter(adapter);
         newMissionBtn = findViewById(R.id.btnNewMission);
         listview.setVisibility(View.INVISIBLE);
@@ -144,13 +143,17 @@ public class MainActivity extends AppCompatActivity implements MainListAdapter.L
         newMissionBtn.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                BaseProduct mProduct = DronePlayMissionApplication.getProductInstance();
-                if (mProduct == null || mProduct.isConnected() == false) {
-                    showToast("Product is not connected !");
-                    return;
-                }
+//                BaseProduct mProduct = DronePlayMissionApplication.getProductInstance();
+//                if (mProduct == null || mProduct.isConnected() == false) {
+//                    showToast("Product is not connected !");
+//                    return;
+//                }
+//
+//                HelperUtils.getInstance().showTitleInputDialog(MainActivity.this, MainActivity.this);
 
-                HelperUtils.getInstance().showTitleInputDialog(MainActivity.this, MainActivity.this);
+                Intent intent = new Intent(MainActivity.this, SmartWatchManagerActivity.class);
+                startActivity(intent);
+
             }
         });
 

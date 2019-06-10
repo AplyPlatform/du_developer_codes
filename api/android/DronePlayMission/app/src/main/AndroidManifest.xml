@@ -5,7 +5,7 @@
     <!--
          The ACCESS_COARSE/FINE_LOCATION permissions are not required to use
          Google Maps Android API v2, but you must specify either coarse or fine
-         location permissions for the 'MyLocation' functionality. 
+         location permissions for the 'MyLocation' functionality.
     -->
     <uses-permission android:name="android.permission.BLUETOOTH" />
     <uses-permission android:name="android.permission.BLUETOOTH_ADMIN" />
@@ -26,6 +26,11 @@
     <uses-permission android:name="android.permission.GET_ACCOUNTS" />
     <uses-permission android:name="android.permission.READ_PROFILE" />
     <uses-permission android:name="android.permission.READ_CONTACTS" />
+
+    <uses-permission android:name="com.samsung.accessory.permission.ACCESSORY_FRAMEWORK" />
+    <uses-permission android:name="com.samsung.android.providers.context.permission.WRITE_USE_APP_FEATURE_SURVEY" />
+    <uses-permission android:name="com.samsung.WATCH_APP_TYPE.Companion" />
+    <uses-permission android:name="com.samsung.wmanager.ENABLE_NOTIFICATION" />
 
     <uses-feature android:name="android.hardware.camera" />
     <uses-feature android:name="android.hardware.camera.autofocus" />
@@ -51,10 +56,31 @@
 
         <meta-data
             android:name="mapbox.sdk.ACCESSTOKEN"
-            android:value="MAPBOX_SDK_ACCESSTOKEN" />
+            android:value="MAPBOX_SDK_TOKEN" />
         <meta-data
             android:name="com.dji.sdk.API_KEY"
-            android:value="DJI_SDK_API_KEY" />
+            android:value="DJK_SDK_API_KEY" />
+
+        <meta-data
+            android:name="AccessoryServicesLocation"
+            android:value="/res/xml/accessoryservices.xml" />
+
+        <service android:name="com.samsung.android.sdk.accessory.SAService" />
+        <service
+            android:name="com.samsung.android.sdk.accessory.SAJobService"
+            android:permission="android.permission.BIND_JOB_SERVICE" />
+
+        <receiver android:name="com.samsung.android.sdk.accessory.RegisterUponInstallReceiver">
+            <intent-filter>
+                <action android:name="com.samsung.accessory.action.REGISTER_AGENT" />
+            </intent-filter>
+        </receiver>
+        <receiver android:name="com.samsung.android.sdk.accessory.MessageReceiver">
+            <intent-filter>
+                <action android:name="com.samsung.accessory.action.MESSAGE_RECEIVED" />
+            </intent-filter>
+        </receiver>
+
         <activity
             android:name=".Activity.MapsActivity"
             android:configChanges="orientation|keyboardHidden|screenSize"
@@ -72,6 +98,12 @@
             android:launchMode="singleTop"
             android:theme="@style/Theme.AppCompat.Light">
 
+        </activity>
+
+        <activity android:name=".Activity.SmartWatchManagerActivity"
+            android:screenOrientation="portrait"
+            android:launchMode="singleTop"
+            android:theme="@style/Theme.AppCompat.Light">
         </activity>
         <service android:name="dji.sdk.sdkmanager.DJIGlobalService" >
         </service>
