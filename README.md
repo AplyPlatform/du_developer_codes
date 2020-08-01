@@ -1,4 +1,4 @@
-# DronePlay Codes
+# DUNI Codes
 
 ## 경로설명
 + [/api/web](https://github.com/theknightsfield/droneplaycodes/tree/master/api/web) : Open API를 활용하는 웹 기반의 예제 코드.
