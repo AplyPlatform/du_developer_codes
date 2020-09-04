@@ -4,7 +4,7 @@
 + [/api/web](https://code.duni.io/api/web) : Open API를 활용하는 웹 기반의 예제 코드.
 + [/api/android](https://code.duni.io/api/android) : Open API를 활용하는 안드로이드 기반의 예제 코드.
 
-# 안드로이드 기반 코드 - DUNI Mission 앱.
+# 안드로이드 기반 코드 - DUNI PILOT 앱.
 <img src="https://code.duni.io/api/android_main.png" alt="DUNI PILOT" width="300">
 <img src="https://code.duni.io/api/android_mission.png" alt="DUNI PILOT" width="300">
 
